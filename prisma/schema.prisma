@@ -23,3 +23,10 @@ enum Profile {
   ALUNO
   ADMIN
 }
+
+model Course {
+  id Int @default(autoincrement()) @id
+  name String
+  sector String
+  duration Int
+}

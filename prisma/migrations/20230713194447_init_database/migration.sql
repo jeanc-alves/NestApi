@@ -1,11 +1,5 @@
-/*
-  Warnings:
-
-  - You are about to drop the `user` table. If the table is not empty, all the data it contains will be lost.
-
-*/
--- DropTable
-DROP TABLE "user";
+-- CreateEnum
+CREATE TYPE "Profile" AS ENUM ('ALUNO', 'ADMIN');
 
 -- CreateTable
 CREATE TABLE "User" (
@@ -17,6 +11,16 @@ CREATE TABLE "User" (
     "profile" "Profile" NOT NULL DEFAULT 'ALUNO',
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Course" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "sector" TEXT NOT NULL,
+    "duration" INTEGER NOT NULL,
+
+    CONSTRAINT "Course_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
