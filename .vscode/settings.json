@@ -1,0 +1,16 @@
+{
+    "material-icon-theme.activeIconPack": "nest",
+    "editor.formatOnSave": true,
+    "[json]": {
+        "editor.quickSuggestions": {
+            "strings": true
+        },
+        "editor.suggest.insertMode": "replace"
+    },
+    "[javascript]": {
+        "editor.maxTokenizationLineLength": 2500
+    },
+    "console-flash.double-quotes": true,
+    "editor.autoClosingBrackets": "always",
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+}
