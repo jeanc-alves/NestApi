@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 
@@ -7,6 +7,11 @@ export class CreateUserService {
   constructor(private prisma: PrismaService) {}
 
   public async handle(data: Prisma.UserCreateInput): Promise<User> {
-    return this.prisma.user.create({ data });
+    try {
+      const user = await this.prisma.user.create({ data });
+      return user;
+    } catch (error) {
+      throw new HttpException('Forbidden', HttpStatus.FORBIDDEN);
+    }
   }
 }

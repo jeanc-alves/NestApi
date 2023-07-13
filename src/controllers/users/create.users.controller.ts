@@ -1,4 +1,10 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpException,
+  HttpStatus,
+  Post,
+} from '@nestjs/common';
 import { Profile, User } from '@prisma/client';
 import { CreateUserService } from 'src/services/users/create.users.service';
 
@@ -17,12 +23,16 @@ export class CreateUsersController {
     },
   ): Promise<User> {
     const { createdAt, first_name, last_name, avatar, profile } = postData;
-    return this.createUsersService.handle({
-      createdAt,
-      first_name,
-      last_name,
-      avatar,
-      profile,
-    });
+    try {
+      return this.createUsersService.handle({
+        createdAt,
+        first_name,
+        last_name,
+        avatar,
+        profile,
+      });
+    } catch (error) {
+      throw new HttpException('Forbidden', HttpStatus.FORBIDDEN);
+    }
   }
 }
