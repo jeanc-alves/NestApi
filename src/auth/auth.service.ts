@@ -3,6 +3,8 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { UsersService } from 'src/users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { jwtConstants } from './constants';
+import { CreateUserDto } from 'src/users/dto/create-user.dto';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -25,5 +27,14 @@ export class AuthService {
       },
     );
     return { access_token, user };
+  }
+
+  async register(data: CreateUserDto): Promise<User> {
+    try {
+      const new_user = await this.usersService.create({ ...data });
+      return new_user;
+    } catch (error) {
+      throw new HttpException(error.message, HttpStatus.UNPROCESSABLE_ENTITY);
+    }
   }
 }

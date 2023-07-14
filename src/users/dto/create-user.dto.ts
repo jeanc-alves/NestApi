@@ -8,8 +8,7 @@ export class CreateUserDto {
   first_name: string;
 
   second_name?: string;
-  @IsNotEmpty({ message: 'Profile is Required!' })
-  profile: Profile;
+  profile?: Profile;
 
   avatar?: string;
 
