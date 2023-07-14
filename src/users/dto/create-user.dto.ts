@@ -4,9 +4,18 @@ import { IsNotEmpty } from 'class-validator';
 export class CreateUserDto {
   id?: number;
   createdAt: Date;
-  @IsNotEmpty({ message: 'Primeiro nome é obrigátorio' })
+  @IsNotEmpty({ message: 'First name is Required!' })
   first_name: string;
-  second_name: string;
+
+  second_name?: string;
+  @IsNotEmpty({ message: 'Profile is Required!' })
   profile: Profile;
-  avatar: string;
+
+  avatar?: string;
+
+  @IsNotEmpty({ message: 'Username is Required!' })
+  username: string;
+
+  @IsNotEmpty({ message: 'Password is Required!' })
+  password: string;
 }

@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/database/prisma.service';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
@@ -14,8 +15,29 @@ export class UsersService {
     return this.prisma.user.findMany();
   }
 
-  findOne(id: number) {
-    return this.prisma.user.findUniqueOrThrow({ where: { id } });
+  async findOne(args: { id?: number; username?: string }) {
+    const query_scope = {
+      id: async (id: number): Promise<any> => {
+        return this.prisma.user.findUniqueOrThrow({
+          select: { id: true, first_name: true, profile: true },
+          where: { id },
+        });
+      },
+      username: async (username: string): Promise<any> => {
+        return this.prisma.user.findUniqueOrThrow({
+          where: { username },
+          select: { id: true, first_name: true, profile: true },
+        });
+      },
+    };
+    const keys = Object.keys(args);
+    for (const key of keys) {
+      if (Object.keys(query_scope).includes(key)) {
+        const c = await query_scope[key](args[key]);
+        return c;
+      }
+    }
+    throw new HttpException('Not Found', HttpStatus.NOT_FOUND);
   }
 
   update(id: number, updateUserDto: UpdateUserDto) {

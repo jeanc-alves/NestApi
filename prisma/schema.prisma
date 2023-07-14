@@ -17,6 +17,8 @@ model User {
   last_name  String?
   avatar  String?
   profile Profile     @default(ALUNO)
+  username String     @unique
+  password String     
 }
 
 enum Profile {
