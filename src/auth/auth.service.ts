@@ -2,6 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 
 import { UsersService } from 'src/users/users.service';
 import { JwtService } from '@nestjs/jwt';
+import { jwtConstants } from './constants';
 
 @Injectable()
 export class AuthService {
@@ -20,7 +21,7 @@ export class AuthService {
     const access_token = await this.jwtService.signAsync(
       JSON.stringify({ ...user }),
       {
-        secret: 'SECRET EXTREME CONFIDENTIAL',
+        secret: jwtConstants.secret,
       },
     );
     return { access_token, user };

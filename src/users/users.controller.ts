@@ -6,19 +6,33 @@ import {
   Patch,
   Param,
   Delete,
+  UseGuards,
+  Request,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { AuthGuard } from 'src/auth/auth.guard';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @UseGuards(AuthGuard)
   @Post()
-  async create(@Body() createUserDto: CreateUserDto) {
-    const userCreated = await this.usersService.create(createUserDto);
-    return { message: 'User created Succefuly!', data: userCreated };
+  async create(@Request() req, @Body() createUserDto: CreateUserDto) {
+    try {
+      await this.usersService.verifyPermission(req.user);
+      const userCreated = await this.usersService.create(createUserDto);
+      return { message: 'User created successfully!', data: userCreated };
+    } catch (error) {
+      throw new HttpException(error.message, error.status, {
+        cause: error,
+        description: `${error}`,
+      });
+    }
   }
 
   @Get()

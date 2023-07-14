@@ -5,7 +5,7 @@ import { LoginDto } from './dto/login.dto';
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
-
+  @HttpCode(200)
   @Post('login')
   async login(@Body() loginDto: LoginDto) {
     const c = await this.authService.signIn(
