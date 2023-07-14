@@ -18,7 +18,9 @@ model User {
   avatar  String?
   profile Profile     @default(ALUNO)
   username String     @unique
-  password String     
+  password String
+  course_id Int
+  course  Course @relation(fields: [course_id], references: [id])
 }
 
 enum Profile {
@@ -31,4 +33,6 @@ model Course {
   name String
   sector String
   duration Int
+  users User[]
 }
+
