@@ -5,22 +5,26 @@ generator client {
   provider = "prisma-client-js"
 }
 
+generator docs {
+  provider = "node node_modules/prisma-docs-generator"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id    Int     @default(autoincrement()) @id
-  createdAt DateTime @default(now())
-  first_name String  @unique
-  last_name  String?
-  avatar  String?
-  profile Profile     @default(ALUNO)
-  username String     @unique
-  password String
-  course_id Int
-  course  Course @relation(fields: [course_id], references: [id])
+  id         Int      @id @default(autoincrement())
+  createdAt  DateTime @default(now())
+  firstName  String   @unique
+  lastName   String?
+  avatar     String?
+  profile    Profile  @default(ALUNO)
+  username   String   @unique
+  password   String
+  course     Course?  @relation(fields: [courseId], references: [id])
+  courseId   Int?
 }
 
 enum Profile {
@@ -29,10 +33,9 @@ enum Profile {
 }
 
 model Course {
-  id Int @default(autoincrement()) @id
-  name String
-  sector String
+  id       Int    @id @default(autoincrement())
+  name     String
+  sector   String
   duration Int
-  users User[]
+  users    User[]
 }
-
