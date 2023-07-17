@@ -1,15 +1,54 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  HttpStatus,
+  HttpCode,
+  HttpException,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
+import { AuthGuard } from 'src/auth/auth.guard';
 
 @Controller('courses')
 export class CoursesController {
-  constructor(private readonly coursesService: CoursesService) {}
+  constructor(private coursesService: CoursesService) {}
 
+  @UseGuards(AuthGuard)
   @Post()
   create(@Body() createCourseDto: CreateCourseDto) {
     return this.coursesService.create(createCourseDto);
+  }
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Post('/:id')
+  async addStudant(
+    @Param('id') courseId: number,
+    @Body() { userId },
+    @Request() req,
+  ) {
+    try {
+      return this.coursesService.addStudentCourse(+courseId, +userId);
+    } catch (error) {
+      throw new HttpException(error.message, error.status);
+    }
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Delete('/:id/removeStudantCourse')
+  async removeStudentCourse(@Param('id') userId: number) {
+    try {
+      return this.coursesService.removeStudentCourse(+userId);
+    } catch (error) {
+      throw new HttpException(error.message, error.status);
+    }
   }
 
   @Get()

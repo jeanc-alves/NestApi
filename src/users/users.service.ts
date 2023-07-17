@@ -20,7 +20,7 @@ export class UsersService {
       id: async (id: number): Promise<any> => {
         try {
           return this.prisma.user.findUniqueOrThrow({
-            select: { id: true, first_name: true, profile: true },
+            select: { id: true, firstName: true, profile: true },
             where: { id },
           });
         } catch (error) {
@@ -31,7 +31,7 @@ export class UsersService {
         try {
           return this.prisma.user.findUniqueOrThrow({
             where: { username },
-            select: { id: true, first_name: true, profile: true },
+            select: { id: true, firstName: true, profile: true },
           });
         } catch (error) {
           throw new HttpException('User Not Found', HttpStatus.NOT_FOUND);

@@ -1,11 +1,10 @@
-import { Profile, User } from '@prisma/client';
-import { IsNotEmpty } from 'class-validator';
+import { Course, Profile, User } from '@prisma/client';
+import { IsNotEmpty, IsOptional } from 'class-validator';
 
 export class CreateUserDto {
-  id?: number;
   createdAt: Date;
   @IsNotEmpty({ message: 'First name is Required!' })
-  first_name: string;
+  firstName: string;
 
   second_name?: string;
   profile?: Profile;
@@ -17,4 +16,7 @@ export class CreateUserDto {
 
   @IsNotEmpty({ message: 'Password is Required!' })
   password: string;
+
+  @IsOptional()
+  course;
 }
