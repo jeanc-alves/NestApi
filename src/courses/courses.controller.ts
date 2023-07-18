@@ -29,11 +29,7 @@ export class CoursesController {
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.OK)
   @Post('/:id')
-  async addStudant(
-    @Param('id') courseId: number,
-    @Body() { userId },
-    @Request() req,
-  ) {
+  async addStudant(@Param('id') courseId: number, @Body() { userId }) {
     try {
       return this.coursesService.addStudentCourse(+courseId, +userId);
     } catch (error) {

@@ -55,23 +55,6 @@ export class UsersController {
     );
     const filePath = `/home/jean/Projects/NestApi/nest-api/uṕload/${+new Date()}.jpg`;
 
-    const buffer = Buffer.from(avatarFileBlob);
-
-    const readableInstanceStream = new Readable({
-      read() {
-        this.push(buffer);
-        this.push(null);
-      },
-    });
-
-    await new Promise((resolve, reject) => {
-      const writer = fs.createWriteStream(filePath);
-      readableInstanceStream.pipe(writer);
-
-      writer.on('finish', resolve);
-      writer.on('error', reject);
-    });
-
     const fileBuffer = await fs.readFileSync(filePath);
   }
 
