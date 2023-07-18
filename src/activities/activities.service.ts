@@ -1,19 +1,33 @@
-import { Injectable } from '@nestjs/common';
-import { CreateActivityDto } from './dto/create-activity.dto';
+import { Body, Injectable, Param, UploadedFile } from '@nestjs/common';
+
 import { UpdateActivityDto } from './dto/update-activity.dto';
+import { PrismaService } from 'src/database/prisma.service';
+import { RabbitMQService } from 'src/rabbittmq/rabbittmq.service';
 
 @Injectable()
 export class ActivitiesService {
-  create(createActivityDto: CreateActivityDto) {
-    return 'This action adds a new activity';
+  constructor(
+    private prisma: PrismaService,
+    private readonly rabbitMQService: RabbitMQService,
+  ) {}
+
+  async create(@Body() data) {
+    return this.prisma.activities.create({ data });
   }
 
-  findAll() {
-    return `This action returns all activities`;
+  uploadFile(@Param('id') id, @UploadedFile() file: Express.Multer.File) {}
+
+  findAll(data) {
+    return this.prisma.activities.findMany(data);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} activity`;
+  findOne(id, data) {
+    const payload = { where: { id } };
+
+    if (data.include) {
+      payload['include'] = data.include;
+    }
+    return this.prisma.activities.findUnique(payload);
   }
 
   update(id: number, updateActivityDto: UpdateActivityDto) {

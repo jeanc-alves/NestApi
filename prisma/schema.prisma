@@ -38,4 +38,24 @@ model Course {
   sector   String
   duration Int
   users    User[]
+  activities    Activities[]
+}
+
+model Activities {
+  id          Int    @id @default(autoincrement())
+  name        String
+  courseId    Int
+  peso        Int
+  course      Course?   @relation(fields: [courseId], references: [id])
+  files       Files[]   
+}
+model Files {
+  id            Int    @id @default(autoincrement())
+  name          String
+  path          String
+  size          Int
+  userId        Int?
+  ext           String
+  activityId      Int?
+  activity Activities? @relation(fields: [activityId], references: [id])
 }

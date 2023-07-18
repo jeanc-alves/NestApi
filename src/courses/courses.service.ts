@@ -59,7 +59,7 @@ export class CoursesService {
   }
 
   findAll() {
-    return `This action returns all courses`;
+    return this.prisma.course.findMany();
   }
 
   findOne(id: number) {
