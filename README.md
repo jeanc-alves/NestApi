@@ -60,6 +60,7 @@ $ yarn run test:cov
 
 ## Configure Env
 
+```js
 Inside the project there is a env.example file duplicate that and rename to .env
 configure your database url settings like that:
 DATABASE_URL="postgresql://postgres:root@localhost:5432/nest?schema=public"
@@ -72,6 +73,13 @@ DATABASE=nest
 DATABASE_USER=postgres
 DATABASE_PASSWORD=root
 DATABASE_URL="${DATABASE_PROVIDER}://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE}?schema=public"
+```
+
+## Runing Rabbit MQ
+
+```bash
+docker run -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3.12-management
+```
 
 ## Support
 
@@ -86,3 +94,7 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](LICENSE).
+
+```
+
+```
