@@ -58,6 +58,21 @@ $ yarn run test:e2e
 $ yarn run test:cov
 ```
 
+## Configure Env
+
+Inside the project there is a env.example file duplicate that and rename to .env
+configure your database url settings like that:
+DATABASE_URL="postgresql://postgres:root@localhost:5432/nest?schema=public"
+
+or like that:
+DATABASE_PROVIDER=postgresql
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE=nest
+DATABASE_USER=postgres
+DATABASE_PASSWORD=root
+DATABASE_URL="${DATABASE_PROVIDER}://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE}?schema=public"
+
 ## Support
 
 Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
