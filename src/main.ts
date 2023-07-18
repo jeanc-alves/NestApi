@@ -8,6 +8,6 @@ async function bootstrap() {
   const rabbitMQService = app.get<RabbitMQService>(RabbitMQService);
   await rabbitMQService.initialize();
   app.useGlobalPipes(new ValidationPipe());
-  await app.listen(3333);
+  await app.listen(parseInt(process.env.PORT));
 }
 bootstrap();

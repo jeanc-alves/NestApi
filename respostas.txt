@@ -1,0 +1,25 @@
+Uma empresa de vagas de emprego possui um sistema para gerenciar os
+usuários que foram empregados usando a sua plataforma. O sistema foi
+desenvolvido com uma regra estrita para cada usuário poder estar ativo em apenas
+uma empresa por vez. Porém, após uma reestruturação, a empresa começou a
+trabalhar também com vagas PJ, permitindo que um usuário estivesse ativo em
+mais de uma empresa ao mesmo tempo. Como você conduziria as alterações desse
+sistema?
+
+Primeiramente eu analizaria o banco de dados para isolar os relacionamentos e mapear as tabelas onde isso pode impactar
+Depois analisaria as regras de negocio que pode ser impactadas por essa feature
+e implementaria em um abiente de test, para validar todas as excessoes
+e apos todas as validações começar iniciaria a implementação parcial para visualizar o comportamento para depois disso enviar isso a produção
+
+Em um sistema de cadastramento de campanhas, depois de 3 meses em
+produção, notou-se que o desempenho do site estava sendo comprometido pelo
+tamanho das imagens cadastradas pelos usuários. Dessa forma é necessário que
+uma ação seja tomada para reduzir o tamanho destes arquivos, sem perder os
+arquivos já cadastrados. É possível resgatar o caminho dessas imagens a partir das
+campanhas a qual elas estão atreladas. Como faria o tratamento das imagens já
+existentes no projeto?
+
+primeiramente desenvolveria uma trava para os novos uploads impedindo imagens de determinada extensão ou tamanho
+depois faria um dump da base de imagems se possivel para que pudesse usar como back-up,
+criaria um serviço que trabalharia agnostico ao sistema(um processamento em fila asyncrona talvez) que corvertesse a imagem para tamanhos menores
+e assim atualizaria as imagems salvas em banco de dados apos a conversão
