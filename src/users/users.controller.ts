@@ -9,12 +9,15 @@ import {
   UseGuards,
   Request,
   HttpException,
-  HttpStatus,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
+import * as fs from 'fs';
+
+import axios from 'axios';
+import { Readable } from 'stream';
 
 @Controller('users')
 export class UsersController {
@@ -35,18 +38,46 @@ export class UsersController {
     }
   }
 
-  @Get()
-  findAll() {
-    return this.usersService.findAll();
+  @Get('user/:id')
+  async findUser(@Param('id') id) {
+    const response = await axios.get(`https://reqres.in/api/users/${id}`);
+
+    return { ...response.data.data };
+  }
+
+  @Get('/user/avatar/:id')
+  async getUserAvatar(@Param('id') id) {
+    const url = `https://reqres.in/api/users/${id}`;
+    const response = await axios.get(url, { responseType: 'stream' });
+    const response2 = await this.findUser(id);
+    const { data: avatarFileBlob } = await axios.get(
+      `https://reqres.in/api/users/${id}`,
+    );
+    const filePath = `/home/jean/Projects/NestApi/nest-api/uṕload/${+new Date()}.jpg`;
+
+    const buffer = Buffer.from(avatarFileBlob);
+
+    const readableInstanceStream = new Readable({
+      read() {
+        this.push(buffer);
+        this.push(null);
+      },
+    });
+
+    await new Promise((resolve, reject) => {
+      const writer = fs.createWriteStream(filePath);
+      readableInstanceStream.pipe(writer);
+
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+    });
+
+    const fileBuffer = await fs.readFileSync(filePath);
   }
 
   @Get(':id')
   findOne(@Param('id') id: number) {
     return this.usersService.findOne({ id: +id });
-  }
-  @Get()
-  findbyUsername(@Body() data) {
-    const { username } = data;
   }
 
   @Patch(':id')
