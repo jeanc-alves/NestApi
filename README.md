@@ -32,6 +32,29 @@
 $ yarn install
 ```
 
+## Configure Database | Env
+
+```js
+Inside the project there is a env.example file duplicate that and rename to .env
+configure your database url settings like that:
+DATABASE_URL="postgresql://postgres:root@localhost:5432/nest?schema=public"
+
+or like that:
+DATABASE_PROVIDER=postgresql
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE=nest
+DATABASE_USER=postgres
+DATABASE_PASSWORD=root
+DATABASE_URL="${DATABASE_PROVIDER}://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE}?schema=public"
+```
+
+## Created Database Tables by PRISMA ORM
+
+```bash
+npx prisma migrate dev --name initial_migration_database
+```
+
 ## Running the app
 
 ```bash
@@ -56,23 +79,6 @@ $ yarn run test:e2e
 
 # test coverage
 $ yarn run test:cov
-```
-
-## Configure Env
-
-```js
-Inside the project there is a env.example file duplicate that and rename to .env
-configure your database url settings like that:
-DATABASE_URL="postgresql://postgres:root@localhost:5432/nest?schema=public"
-
-or like that:
-DATABASE_PROVIDER=postgresql
-DATABASE_HOST=localhost
-DATABASE_PORT=5432
-DATABASE=nest
-DATABASE_USER=postgres
-DATABASE_PASSWORD=root
-DATABASE_URL="${DATABASE_PROVIDER}://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE}?schema=public"
 ```
 
 ## Runing Rabbit MQ
