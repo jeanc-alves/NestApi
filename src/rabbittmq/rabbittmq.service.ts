@@ -1,6 +1,6 @@
 // rabbitmq.service.ts
 
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { connect, Connection, Channel } from 'amqplib';
 
 @Injectable()
@@ -18,7 +18,10 @@ export class RabbitMQService {
     try {
       await this.channel.sendToQueue(`${queueName}`, Buffer.from(message));
     } catch (error) {
-      console.log('error: ', error);
+      throw new HttpException(
+        'Error when try send a message to RabbitMQ',
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
     }
   }
 
