@@ -9,7 +9,7 @@ CREATE TABLE "User" (
     "lastName" TEXT,
     "avatar" TEXT,
     "profile" "Profile" NOT NULL DEFAULT 'ALUNO',
-    "username" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
     "password" TEXT NOT NULL,
     "courseId" INTEGER,
 
@@ -30,7 +30,7 @@ CREATE TABLE "Course" (
 CREATE UNIQUE INDEX "User_firstName_key" ON "User"("firstName");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
+CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- AddForeignKey
 ALTER TABLE "User" ADD CONSTRAINT "User_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "Course"("id") ON DELETE SET NULL ON UPDATE CASCADE;

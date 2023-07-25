@@ -1,42 +1,52 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Res } from '@nestjs/common';
 import { CreateCourseDto } from './dto/create-course.dto';
-import { UpdateCourseDto } from './dto/update-course.dto';
-import { PrismaClient } from '@prisma/client';
+
+import { PrismaService } from 'src/database/prisma.service';
+import { User } from 'src/activities/interfaces/index';
+import { Course } from '@prisma/client';
 
 export class addStudentDto {
   courseId: number;
-  userId: number;
+  user: User;
 }
 
 @Injectable()
 export class CoursesService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private prisma: PrismaService) {}
 
-  async create(createCourseDto: CreateCourseDto) {
+  async create(createCourseDto: CreateCourseDto): Promise<Course> {
     return this.prisma.course.create({ data: createCourseDto });
   }
 
-  async addStudentCourse(courseId?: number, userId?: number) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { course: true },
-    });
-    if (!user.course) {
+  async addStudentCourse({ courseId, user }: addStudentDto): Promise<Course> {
+    if (user.course) {
       throw new HttpException(
         'User have a registered course',
         HttpStatus.UNAUTHORIZED,
       );
     }
-    return this.prisma.user.update({
-      where: { id: userId },
+    const course = await this.prisma.course.findFirst({
+      where: { id: courseId },
+      include: { users: true },
+    });
+    if (!course) {
+      throw new HttpException('Course Not Found', HttpStatus.NOT_FOUND);
+    }
+    await this.prisma.user.update({
+      where: { id: user.id },
       data: { courseId: courseId },
       include: { course: true },
     });
+
+    return this.prisma.course.findFirst({
+      where: { id: courseId },
+      include: { users: true },
+    });
   }
 
-  async removeStudentCourse(userId?: number) {
+  async removeStudentCourse(@Res() res, userId?: number): Promise<User | any> {
     try {
-      const existStudantCourse = await this.prisma.user.findFirstOrThrow({
+      const existStudantCourse = await this.prisma.user.findFirst({
         where: { id: userId },
         include: { course: true },
       });
@@ -45,11 +55,11 @@ export class CoursesService {
         return this.prisma.user.update({
           where: { id: userId },
           data: {
-            course: { delete: { id: existStudantCourse.courseId } },
+            courseId: null,
           },
         });
       }
-      return;
+      return res.status(HttpStatus.NO_CONTENT);
     } catch (error) {
       if (error.code === 'P2025') {
         throw new HttpException(error.meta.cause, HttpStatus.NOT_FOUND);
@@ -58,19 +68,10 @@ export class CoursesService {
     }
   }
 
-  findAll() {
-    return this.prisma.course.findMany();
+  async findAll(): Promise<Course[]> {
+    return this.prisma.course.findMany({ include: { users: true } });
   }
-
-  findOne(id: number) {
-    return `This action returns a #${id} course`;
-  }
-
-  update(id: number, updateCourseDto: UpdateCourseDto) {
-    return `This action updates a #${id} course`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} course`;
+  findOne(id: number): Promise<Course | null> {
+    return this.prisma.course.findUnique({ where: { id } });
   }
 }
