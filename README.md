@@ -51,10 +51,10 @@ DATABASE_URL="${DATABASE_PROVIDER}://${DATABASE_USER}:${DATABASE_PASSWORD}@${DAT
 
 ## Configure nodemailer email provider
 
+I am using [Ethereal](https://ethereal.email/create) to test
+Configure your .env file with yours configs regarding Nodemailer provider:
+
 ```js
-
-Configure with your .env with yours cofings regarding nodemailer provider:
-
 SMTP_HOST=smtp.ethereal.email
 SMTP_PORT=587
 SMTP_SECURITY=STARTLS

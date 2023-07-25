@@ -156,7 +156,10 @@ export class UsersController {
       }
       res.sendFile(user.avatar);
     } catch (error) {
-      console.log('error: ', error);
+      throw new HttpException(
+        'Error when try download avatar file',
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
     }
   }
 }
