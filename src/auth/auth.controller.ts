@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { User } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 @Controller('auth')
 export class AuthController {
@@ -10,11 +11,7 @@ export class AuthController {
   @HttpCode(200)
   @Post('login')
   async login(@Body() loginDto: LoginDto) {
-    const c = await this.authService.signIn(
-      loginDto.username,
-      loginDto.password,
-    );
-    return c;
+    return this.authService.signIn(loginDto.email, loginDto.password);
   }
 
   @HttpCode(201)

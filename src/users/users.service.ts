@@ -3,35 +3,48 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/database/prisma.service';
 import { User } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
-  create(createUserDto: CreateUserDto) {
-    return this.prisma.user.create({ data: createUserDto });
+  async create(createUserDto: CreateUserDto) {
+    const hash = await bcrypt.hash(createUserDto.password, 10);
+    const userCreated = await this.prisma.user.create({
+      data: {
+        ...createUserDto,
+        password: hash,
+      },
+    });
+    return userCreated;
   }
 
   findAll() {
     return this.prisma.user.findMany();
   }
 
-  async findOne(args: { id?: number; username?: string }) {
+  async findOne(args: { id?: number; email?: string }) {
     const query_scope = {
       id: async (id: number): Promise<any> => {
         try {
           return this.prisma.user.findUniqueOrThrow({
-            select: { id: true, firstName: true, profile: true },
+            include: { course: true },
             where: { id },
           });
         } catch (error) {
           throw new HttpException('User Not Found', HttpStatus.NOT_FOUND);
         }
       },
-      username: async (username: string): Promise<any> => {
+      email: async (email: string): Promise<any> => {
         try {
           return this.prisma.user.findUniqueOrThrow({
-            where: { username },
-            select: { id: true, firstName: true, profile: true },
+            where: { email },
+            select: {
+              id: true,
+              firstName: true,
+              profile: true,
+              password: true,
+            },
           });
         } catch (error) {
           throw new HttpException('User Not Found', HttpStatus.NOT_FOUND);
