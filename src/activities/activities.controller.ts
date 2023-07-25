@@ -3,32 +3,35 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
-  Delete,
   UseInterceptors,
-  UploadedFile,
   Request,
   UseGuards,
   UploadedFiles,
   ParseFilePipeBuilder,
   HttpStatus,
   Res,
+  HttpException,
 } from '@nestjs/common';
 import { ActivitiesService } from './activities.service';
 
-import { UpdateActivityDto } from './dto/update-activity.dto';
+import { html } from '../resources/ActivitiesCreatedEmail';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { FilesService } from 'src/files/files.service';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { RabbitMQService } from 'src/rabbittmq/rabbittmq.service';
+import { CreateActivityDto } from './dto/create-activity.dto';
+import { EmailService } from 'src/email/email.service';
+import { CoursesService } from 'src/courses/courses.service';
 
 @Controller('activities')
 export class ActivitiesController {
   constructor(
-    private readonly activitiesService: ActivitiesService,
+    private activitiesService: ActivitiesService,
     private filesService: FilesService,
     private rabbitMQService: RabbitMQService,
+    private emailService: EmailService,
+    private courseService: CoursesService,
   ) {}
 
   @UseGuards(AuthGuard)
@@ -49,11 +52,15 @@ export class ActivitiesController {
     )
     files: Array<Express.Multer.File>,
     @Body()
-    body,
+    body: CreateActivityDto,
     @Request() req,
   ) {
     const { name, courseId, peso } = body;
+    const course = await this.courseService.findOne(+courseId);
 
+    if (!course) {
+      throw new HttpException('Course Not Found', HttpStatus.NOT_FOUND);
+    }
     const activity = await this.activitiesService.create({
       name,
       courseId: +courseId,
@@ -71,12 +78,34 @@ export class ActivitiesController {
     }
 
     const activityReload = await this.findOne(activity.id, {
-      include: { files: true },
+      include: {
+        files: true,
+        course: { include: { users: true } },
+      },
     });
 
     await this.rabbitMQService.sendMessage(
       JSON.stringify({ ...activityReload }),
     );
+
+    try {
+      for (const user of activityReload.course.users) {
+        await this.emailService.sendMail({
+          from: 'email@test.com',
+          to: user.email,
+          html: html(
+            `${user.firstName} ${
+              user.secondName !== '' ? user.secondName : ''
+            }`,
+            `${activityReload.course.name}`,
+          ),
+          subject: 'Atividade nova Criada',
+          text: `segue a nova atividade`,
+        });
+      }
+    } catch (error) {
+      console.log('error: ', error);
+    }
 
     return { activity, files: fileCreatead };
   }
@@ -100,17 +129,5 @@ export class ActivitiesController {
     });
 
     return this.filesService.downloadZipFiles(activity, res);
-  }
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateActivityDto: UpdateActivityDto,
-  ) {
-    return this.activitiesService.update(+id, updateActivityDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.activitiesService.remove(+id);
   }
 }
