@@ -1,4 +1,4 @@
-import { Body, Injectable, Param, UploadedFile } from '@nestjs/common';
+import { Body, Injectable } from '@nestjs/common';
 
 import { PrismaService } from 'src/database/prisma.service';
 import { CreateActivityDto } from './dto/create-activity.dto';
@@ -15,11 +15,6 @@ export class ActivitiesService {
       data: { courseId, name, peso },
     });
   }
-
-  async uploadFile(
-    @Param('id') id,
-    @UploadedFile() file: Express.Multer.File,
-  ) {}
 
   async findAll(data: object) {
     return this.prisma.activities.findMany(data);

@@ -10,8 +10,7 @@ import * as appRoot from 'app-root-path';
 import * as fs_extra from 'fs-extra';
 import * as archiver from 'archiver';
 import { Response } from 'express';
-import { UpdateActivityDto } from 'src/activities/dto/update-activity.dto';
-import { Files } from 'src/activities/interfaces';
+
 import { File } from './entities/file.entity';
 
 @Injectable()
@@ -119,7 +118,7 @@ export class FilesService {
       });
 
       archive.on('error', (err: any) => {
-        res.status(500).send('Error creating the zip file');
+        res.status(500).send({ message: err.message });
       });
 
       archive.pipe(output);

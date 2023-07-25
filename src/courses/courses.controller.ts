@@ -3,7 +3,6 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
   Delete,
   HttpStatus,
@@ -33,7 +32,10 @@ export class CoursesController {
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.OK)
   @Post('/:id')
-  async addStudant(@Param('id') courseId: number, @Body() { userId }) {
+  async addStudant(
+    @Param('id') courseId: number,
+    @Body() { userId },
+  ): Promise<Course | HttpException> {
     try {
       const user = await this.userService.findOne({ id: userId });
       if (!user) {
