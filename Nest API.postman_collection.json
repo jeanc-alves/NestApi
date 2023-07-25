@@ -16,7 +16,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"firstName\": \"Aluno1\",\n    \"lastName\": \"B\",\n    \"username\": \"Aluno1\",\n    \"password\": \"senha123\",\n    \"profile\": \"ADMIN\"\n}",
+							"raw": "{\n    \"firstName\": \"Aluno1\",\n    \"lastName\": \"B\",\n    \"email\": \"admin@admin.com\",\n    \"password\": \"senha123\",\n    \"profile\": \"ADMIN\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -43,7 +43,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"firstName\": \"Aluno\",\n    \"lastName\": \"B\",\n    \"username\": \"Aluno\",\n    \"password\": \"senha123\",\n    \"profile\": \"ALUNO\"\n}",
+							"raw": "{\n    \"firstName\": \"{{$randomFirstName}}\",\n    \"lastName\": \"{{$randomLastName}}\",\n    \"email\": \"jean@email.com\",\n    \"password\": \"senha123\",\n    \"profile\": \"ALUNO\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -87,7 +87,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"username\": \"admin\",\n    \"password\": \"senha123\"\n}",
+							"raw": "{\n    \"email\": \"jean@email.com\",\n    \"password\": \"senh2a123\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -141,7 +141,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"username\" :\"Aluno\",\n    \"password\" :\"senha123\"\n}",
+							"raw": "{\n    \"email\" :\"Aluno\",\n    \"password\" :\"senha123\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -186,20 +186,25 @@
 					"response": []
 				},
 				{
-					"name": "Get User Regres Api Copy",
+					"name": "Get Avatar User",
 					"request": {
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{BASE_URL}}/users/user/avatar/1",
+							"raw": "{{BASE_URL}}/users/avatar/2?download=true",
 							"host": [
 								"{{BASE_URL}}"
 							],
 							"path": [
 								"users",
-								"user",
 								"avatar",
-								"1"
+								"2"
+							],
+							"query": [
+								{
+									"key": "download",
+									"value": "true"
+								}
 							]
 						}
 					},
@@ -208,6 +213,16 @@
 				{
 					"name": "Get All Users",
 					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
 						"method": "GET",
 						"header": [],
 						"url": {
@@ -217,6 +232,38 @@
 							],
 							"path": [
 								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Avatar",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": []
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/users/1",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"users",
+								"1"
 							]
 						}
 					},
@@ -347,7 +394,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"userId\": 1\n}",
+							"raw": "{\n    \"userId\": 2\n}",
 							"options": {
 								"raw": {
 									"language": "json"

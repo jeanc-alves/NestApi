@@ -4,6 +4,7 @@ export class Activities {
   courseId: number;
   peso: number;
   course?: Course;
+  files?: Files[];
 }
 export class Course {
   id: number;
@@ -14,14 +15,31 @@ export class Course {
   activities: Activities[];
 }
 
+enum Profile {
+  ALUNO,
+  ADMINISTRADOR,
+}
+
 export class User {
-  id: number;
+  id?: number;
   firstName: string;
-  secondName: string;
+  secondName?: string;
   email: string;
   course?: Course;
+  profile: Profile;
+  courseId?: number;
+  createdAt?: Date;
+  lastName?: string;
+  avatar: string;
+  password: string;
 }
 
 export class Files {
   id: number;
+}
+
+export interface IResponseCreateActivities {
+  activity: Activities;
+  email_sent_to: String[];
+  files: File[];
 }

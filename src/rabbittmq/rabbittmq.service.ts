@@ -7,16 +7,19 @@ import { connect, Connection, Channel } from 'amqplib';
 export class RabbitMQService {
   private connection: Connection;
   private channel: Channel;
-  private readonly queueName = 'new_activities';
 
-  async initialize() {
+  async initialize(queueName: string = 'new_activities_created') {
     this.connection = await connect('amqp://guest:guest@localhost:5672'); // Coloque a URL de conexão correta para o seu servidor RabbitMQ
     this.channel = await this.connection.createChannel();
-    await this.channel.assertQueue(this.queueName);
+    await this.channel.assertQueue(queueName);
   }
 
-  async sendMessage(message: string) {
-    await this.channel.sendToQueue(this.queueName, Buffer.from(message));
+  async sendMessage(message: string, queueName: string) {
+    try {
+      await this.channel.sendToQueue(`${queueName}`, Buffer.from(message));
+    } catch (error) {
+      console.log('error: ', error);
+    }
   }
 
   async closeConnection() {

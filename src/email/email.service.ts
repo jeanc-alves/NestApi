@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 
 @Injectable()
@@ -28,7 +28,7 @@ export class EmailService {
     try {
       return this.transporter.sendMail(options);
     } catch (error) {
-      console.log('error: ', error);
+      throw new HttpException('Erro to send email', HttpStatus.BAD_REQUEST);
     }
   }
 }

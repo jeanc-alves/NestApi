@@ -2,21 +2,31 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/database/prisma.service';
-import { User } from '@prisma/client';
+
 import * as bcrypt from 'bcrypt';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
   async create(createUserDto: CreateUserDto) {
-    const hash = await bcrypt.hash(createUserDto.password, 10);
-    const userCreated = await this.prisma.user.create({
+    const { email, firstName, password, avatar, courseId, createdAt, profile } =
+      createUserDto;
+    const hash = await bcrypt.hash(password, 10);
+    const newUser = await this.prisma.user.create({
       data: {
-        ...createUserDto,
+        email,
+        firstName,
         password: hash,
+        avatar,
+        courseId,
+        createdAt,
       },
     });
-    return userCreated;
+
+    return this.prisma.user.findUnique({
+      where: { id: newUser.id },
+    });
   }
 
   findAll() {
@@ -25,9 +35,9 @@ export class UsersService {
 
   async findOne(args: { id?: number; email?: string }) {
     const query_scope = {
-      id: async (id: number): Promise<any> => {
+      id: async (id: number) => {
         try {
-          return this.prisma.user.findUniqueOrThrow({
+          return this.prisma.user.findUnique({
             include: { course: true },
             where: { id },
           });
@@ -35,16 +45,10 @@ export class UsersService {
           throw new HttpException('User Not Found', HttpStatus.NOT_FOUND);
         }
       },
-      email: async (email: string): Promise<any> => {
+      email: async (email: string) => {
         try {
-          return this.prisma.user.findUniqueOrThrow({
+          return this.prisma.user.findUnique({
             where: { email },
-            select: {
-              id: true,
-              firstName: true,
-              profile: true,
-              password: true,
-            },
           });
         } catch (error) {
           throw new HttpException('User Not Found', HttpStatus.NOT_FOUND);
@@ -76,7 +80,13 @@ export class UsersService {
   }
 
   update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+    const { avatar } = updateUserDto;
+    return this.prisma.user.update({
+      where: { id: +id },
+      data: {
+        avatar,
+      },
+    });
   }
 
   remove(id: number) {

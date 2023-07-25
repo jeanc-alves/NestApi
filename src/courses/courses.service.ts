@@ -1,8 +1,9 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Res } from '@nestjs/common';
 import { CreateCourseDto } from './dto/create-course.dto';
 
 import { PrismaService } from 'src/database/prisma.service';
 import { User } from 'src/activities/interfaces/index';
+import { Course } from '@prisma/client';
 
 export class addStudentDto {
   courseId: number;
@@ -13,11 +14,11 @@ export class addStudentDto {
 export class CoursesService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createCourseDto: CreateCourseDto) {
+  async create(createCourseDto: CreateCourseDto): Promise<Course> {
     return this.prisma.course.create({ data: createCourseDto });
   }
 
-  async addStudentCourse({ courseId, user }: addStudentDto) {
+  async addStudentCourse({ courseId, user }: addStudentDto): Promise<Course> {
     if (user.course) {
       throw new HttpException(
         'User have a registered course',
@@ -29,7 +30,7 @@ export class CoursesService {
       include: { users: true },
     });
     if (!course) {
-      new HttpException('Course Not Found', HttpStatus.NOT_FOUND);
+      throw new HttpException('Course Not Found', HttpStatus.NOT_FOUND);
     }
     await this.prisma.user.update({
       where: { id: user.id },
@@ -37,12 +38,15 @@ export class CoursesService {
       include: { course: true },
     });
 
-    return { course };
+    return this.prisma.course.findFirst({
+      where: { id: courseId },
+      include: { users: true },
+    });
   }
 
-  async removeStudentCourse(userId?: number) {
+  async removeStudentCourse(@Res() res, userId?: number): Promise<User | any> {
     try {
-      const existStudantCourse = await this.prisma.user.findFirstOrThrow({
+      const existStudantCourse = await this.prisma.user.findFirst({
         where: { id: userId },
         include: { course: true },
       });
@@ -51,11 +55,11 @@ export class CoursesService {
         return this.prisma.user.update({
           where: { id: userId },
           data: {
-            course: { delete: { id: existStudantCourse.courseId } },
+            courseId: null,
           },
         });
       }
-      return;
+      return res.status(HttpStatus.NO_CONTENT);
     } catch (error) {
       if (error.code === 'P2025') {
         throw new HttpException(error.meta.cause, HttpStatus.NOT_FOUND);
@@ -64,10 +68,10 @@ export class CoursesService {
     }
   }
 
-  findAll() {
-    return this.prisma.course.findMany();
+  async findAll(): Promise<Course[]> {
+    return this.prisma.course.findMany({ include: { users: true } });
   }
-  findOne(id) {
+  findOne(id: number): Promise<Course | null> {
     return this.prisma.course.findUnique({ where: { id } });
   }
 }

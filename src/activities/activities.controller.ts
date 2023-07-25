@@ -24,6 +24,8 @@ import { CreateActivityDto } from './dto/create-activity.dto';
 import { EmailService } from 'src/email/email.service';
 import { CoursesService } from 'src/courses/courses.service';
 
+import { IResponseCreateActivities } from './interfaces';
+
 @Controller('activities')
 export class ActivitiesController {
   constructor(
@@ -54,7 +56,7 @@ export class ActivitiesController {
     @Body()
     body: CreateActivityDto,
     @Request() req,
-  ) {
+  ): Promise<IResponseCreateActivities> {
     const { name, courseId, peso } = body;
     const course = await this.courseService.findOne(+courseId);
 
@@ -84,13 +86,19 @@ export class ActivitiesController {
       },
     });
 
+    await this.rabbitMQService.initialize('new_activities_created');
+
     await this.rabbitMQService.sendMessage(
       JSON.stringify({ ...activityReload }),
+      'new_activities_created',
     );
 
+    await this.rabbitMQService.closeConnection();
+
+    let emails = [];
     try {
       for (const user of activityReload.course.users) {
-        await this.emailService.sendMail({
+        const email = await this.emailService.sendMail({
           from: 'email@test.com',
           to: user.email,
           html: html(
@@ -102,12 +110,17 @@ export class ActivitiesController {
           subject: 'Atividade nova Criada',
           text: `segue a nova atividade`,
         });
+        emails.push(email);
       }
-    } catch (error) {
-      console.log('error: ', error);
-    }
 
-    return { activity, files: fileCreatead };
+      return {
+        activity: activityReload,
+        email_sent_to: emails,
+        files: fileCreatead,
+      };
+    } catch (error) {
+      throw new HttpException('Error to send Email', HttpStatus.BAD_REQUEST);
+    }
   }
 
   @Get()
@@ -116,12 +129,12 @@ export class ActivitiesController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: number, data) {
+  async findOne(@Param('id') id: number, data) {
     return this.activitiesService.findOne(+id, data);
   }
 
   @Get(':id/download-files')
-  async downloadFiles(@Param('id') id: number, @Res() res: Response) {
+  async downloadFiles(@Param('id') id: number, @Res() res) {
     const activity = await this.activitiesService.findOne(+id, {
       include: { files: true, course: true },
       where: { id: +id },
