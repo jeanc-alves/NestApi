@@ -9,17 +9,19 @@ import {
   HttpStatus,
   HttpCode,
   HttpException,
-  Request,
   UseGuards,
 } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
-import { UpdateCourseDto } from './dto/update-course.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { UsersService } from 'src/users/users.service';
 
 @Controller('courses')
 export class CoursesController {
-  constructor(private coursesService: CoursesService) {}
+  constructor(
+    private coursesService: CoursesService,
+    private userService: UsersService,
+  ) {}
 
   @UseGuards(AuthGuard)
   @Post()
@@ -31,7 +33,11 @@ export class CoursesController {
   @Post('/:id')
   async addStudant(@Param('id') courseId: number, @Body() { userId }) {
     try {
-      return this.coursesService.addStudentCourse(+courseId, +userId);
+      const user = await this.userService.findOne({ id: userId });
+      return this.coursesService.addStudentCourse({
+        courseId: +courseId,
+        user,
+      });
     } catch (error) {
       throw new HttpException(error.message, error.status);
     }
@@ -50,20 +56,5 @@ export class CoursesController {
   @Get()
   findAll() {
     return this.coursesService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.coursesService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCourseDto: UpdateCourseDto) {
-    return this.coursesService.update(+id, updateCourseDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.coursesService.remove(+id);
   }
 }

@@ -1,37 +1,43 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { CreateCourseDto } from './dto/create-course.dto';
-import { UpdateCourseDto } from './dto/update-course.dto';
-import { PrismaClient } from '@prisma/client';
+
+import { PrismaService } from 'src/database/prisma.service';
+import { User } from 'src/activities/interfaces/index';
 
 export class addStudentDto {
   courseId: number;
-  userId: number;
+  user: User;
 }
 
 @Injectable()
 export class CoursesService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private prisma: PrismaService) {}
 
   async create(createCourseDto: CreateCourseDto) {
     return this.prisma.course.create({ data: createCourseDto });
   }
 
-  async addStudentCourse(courseId?: number, userId?: number) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { course: true },
-    });
-    if (!user.course) {
+  async addStudentCourse({ courseId, user }: addStudentDto) {
+    if (user.course) {
       throw new HttpException(
         'User have a registered course',
         HttpStatus.UNAUTHORIZED,
       );
     }
-    return this.prisma.user.update({
-      where: { id: userId },
+    const course = await this.prisma.course.findFirst({
+      where: { id: courseId },
+      include: { users: true },
+    });
+    if (!course) {
+      new HttpException('Course Not Found', HttpStatus.NOT_FOUND);
+    }
+    await this.prisma.user.update({
+      where: { id: user.id },
       data: { courseId: courseId },
       include: { course: true },
     });
+
+    return { course };
   }
 
   async removeStudentCourse(userId?: number) {
@@ -61,16 +67,7 @@ export class CoursesService {
   findAll() {
     return this.prisma.course.findMany();
   }
-
-  findOne(id: number) {
-    return `This action returns a #${id} course`;
-  }
-
-  update(id: number, updateCourseDto: UpdateCourseDto) {
-    return `This action updates a #${id} course`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} course`;
+  findOne(id) {
+    return this.prisma.course.findUnique({ where: { id } });
   }
 }
