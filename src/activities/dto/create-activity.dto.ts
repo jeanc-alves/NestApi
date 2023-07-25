@@ -1,5 +1,5 @@
 import { Course } from '@prisma/client';
-import { IsInt, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsOptional } from 'class-validator';
 
 export class CreateActivityDto {
   @IsNotEmpty()

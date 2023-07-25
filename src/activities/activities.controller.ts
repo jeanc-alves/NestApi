@@ -95,7 +95,7 @@ export class ActivitiesController {
 
     await this.rabbitMQService.closeConnection();
 
-    let emails = [];
+    const emails = [];
     try {
       for (const user of activityReload.course.users) {
         const email = await this.emailService.sendMail({

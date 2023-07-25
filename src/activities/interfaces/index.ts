@@ -40,6 +40,6 @@ export class Files {
 
 export interface IResponseCreateActivities {
   activity: Activities;
-  email_sent_to: String[];
+  email_sent_to: string[];
   files: File[];
 }
