@@ -16,6 +16,7 @@ import { CreateCourseDto } from './dto/create-course.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { UsersService } from 'src/users/users.service';
 import { Course } from '@prisma/client';
+import { RoleGuard } from 'src/role/role.guard';
 
 @Controller('courses')
 export class CoursesController {
@@ -23,13 +24,14 @@ export class CoursesController {
     private coursesService: CoursesService,
     private userService: UsersService,
   ) {}
-
+  @UseGuards(RoleGuard)
   @UseGuards(AuthGuard)
   @Post()
   create(@Body() createCourseDto: CreateCourseDto) {
     return this.coursesService.create(createCourseDto);
   }
   @UseGuards(AuthGuard)
+  @UseGuards(RoleGuard)
   @HttpCode(HttpStatus.OK)
   @Post('/:id')
   async addStudant(
@@ -49,7 +51,8 @@ export class CoursesController {
       throw new HttpException(error.message, error.status);
     }
   }
-
+  @UseGuards(AuthGuard)
+  @UseGuards(RoleGuard)
   @HttpCode(HttpStatus.OK)
   @Delete('/:id/removeStudantCourse')
   async removeStudentCourse(

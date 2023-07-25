@@ -25,6 +25,7 @@ import { EmailService } from 'src/email/email.service';
 import { CoursesService } from 'src/courses/courses.service';
 
 import { IResponseCreateActivities } from './interfaces';
+import { RoleGuard } from 'src/role/role.guard';
 
 @Controller('activities')
 export class ActivitiesController {
@@ -35,7 +36,7 @@ export class ActivitiesController {
     private emailService: EmailService,
     private courseService: CoursesService,
   ) {}
-
+  @UseGuards(RoleGuard)
   @UseGuards(AuthGuard)
   @Post()
   @UseInterceptors(AnyFilesInterceptor())

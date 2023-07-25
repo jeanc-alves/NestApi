@@ -20,7 +20,7 @@
 
 - [ ] Sem entidades
 
-- [ ] Validações insuficientes em dto
+- [x] Validações insuficientes em dto
 
 - [x] Atributos sem tipagem
 
@@ -38,7 +38,7 @@
 
 - [x] Não retorna avatar salvo localmente
 
-- [ ] Sem verificação de Role no middleware
+- [x] Sem verificação de Role no middleware
 
 - [x] Funções não assíncronas
 

@@ -62,10 +62,21 @@ SMTP_USERNAME=jon38@ethereal.email
 SMTP_PASSWORD=hMyjGYUjh71M8yttZ1
 ```
 
-## Created Database Tables by PRISMA ORM
+## Created Database Tables by PRISMA ORM and
 
 ```bash
 npx prisma migrate dev --name initial_migration_database
+```
+
+## Create User by seed
+
+```bash
+npx prisma db seed
+```
+
+```js
+[{email: 'admin@admin.com', password: 'senha123'}
+{email: 'aluno@email.com', password: 'senha123'}]
 ```
 
 ## Running the app

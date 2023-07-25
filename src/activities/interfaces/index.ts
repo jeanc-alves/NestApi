@@ -17,7 +17,7 @@ export class Course {
 
 enum Profile {
   ALUNO,
-  ADMINISTRADOR,
+  ADMIN,
 }
 
 export class User {
