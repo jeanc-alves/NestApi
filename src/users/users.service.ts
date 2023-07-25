@@ -9,8 +9,8 @@ import { User } from '@prisma/client';
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
-  async create(createUserDto: CreateUserDto) {
-    const { email, firstName, password, avatar, courseId, createdAt, profile } =
+  async create(createUserDto: CreateUserDto): Promise<User> {
+    const { email, firstName, password, avatar, courseId, createdAt } =
       createUserDto;
     const hash = await bcrypt.hash(password, 10);
     const newUser = await this.prisma.user.create({
@@ -29,11 +29,11 @@ export class UsersService {
     });
   }
 
-  findAll() {
+  async findAll(): Promise<User[]> {
     return this.prisma.user.findMany();
   }
 
-  async findOne(args: { id?: number; email?: string }) {
+  async findOne(args: { id?: number; email?: string }): Promise<User> {
     const query_scope = {
       id: async (id: number) => {
         try {

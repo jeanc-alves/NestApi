@@ -2,12 +2,12 @@ import { HttpException, HttpStatus, Injectable, Res } from '@nestjs/common';
 import { CreateCourseDto } from './dto/create-course.dto';
 
 import { PrismaService } from 'src/database/prisma.service';
-import { User } from 'src/activities/interfaces/index';
-import { Course } from '@prisma/client';
+
+import { Course, User } from '@prisma/client';
 
 export class addStudentDto {
   courseId: number;
-  user: User;
+  user?: User;
 }
 
 @Injectable()
@@ -19,7 +19,7 @@ export class CoursesService {
   }
 
   async addStudentCourse({ courseId, user }: addStudentDto): Promise<Course> {
-    if (user.course) {
+    if (user.courseId) {
       throw new HttpException(
         'User have a registered course',
         HttpStatus.UNAUTHORIZED,
