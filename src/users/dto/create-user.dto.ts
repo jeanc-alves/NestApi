@@ -1,15 +1,13 @@
+import { Profile } from '@prisma/client';
 import { IsEmail, IsNotEmpty, IsOptional } from 'class-validator';
-enum Profile {
-  ALUNO,
-  ADMIN,
-}
+
 export class CreateUserDto {
   createdAt?: Date;
   @IsNotEmpty({ message: 'First name is Required!' })
   firstName: string;
 
   second_name?: string;
-  profile?: Profile;
+  profile: Profile;
 
   avatar?: string;
   @IsEmail()

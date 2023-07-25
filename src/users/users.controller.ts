@@ -21,7 +21,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
 import * as fs from 'fs';
 
-import axios from 'axios';
+import axios, { HttpStatusCode } from 'axios';
 import * as path from 'path';
 import * as appRoot from 'app-root-path';
 
@@ -31,6 +31,7 @@ import { FilesService } from 'src/files/files.service';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from '@prisma/client';
+import { RoleGuard } from 'src/role/role.guard';
 
 @Controller('users')
 export class UsersController {
@@ -38,7 +39,7 @@ export class UsersController {
     private readonly usersService: UsersService,
     private filesService: FilesService,
   ) {}
-
+  @UseGuards(RoleGuard)
   @UseGuards(AuthGuard)
   @Post()
   async create(@Request() req, @Body() createUserDto: CreateUserDto) {
@@ -134,7 +135,7 @@ export class UsersController {
 
     return this.usersService.update(+id, { avatar: avatarUploaded.path });
   }
-
+  @UseGuards(RoleGuard)
   @UseGuards(AuthGuard)
   @Patch(':id')
   async update(@Param('id') id, body: UpdateUserDto): Promise<User> {
@@ -150,12 +151,24 @@ export class UsersController {
   ): Promise<Response | void> {
     try {
       const user = await this.usersService.findOne({ id: +id });
-
+      if (!user.avatar) {
+        throw new HttpException(
+          'User dont have avatar saved localy',
+          HttpStatus.NOT_FOUND,
+        );
+      }
       if (download) {
         return res.download(user.avatar);
       }
+
       res.sendFile(user.avatar);
     } catch (error) {
+      if (error.status === HttpStatusCode.NotFound) {
+        throw new HttpException(
+          'User dont have avatar saved localy',
+          HttpStatus.NOT_FOUND,
+        );
+      }
       throw new HttpException(
         'Error when try download avatar file',
         HttpStatus.UNPROCESSABLE_ENTITY,
