@@ -9,6 +9,10 @@ import * as appRoot from 'app-root-path';
 
 import * as fs_extra from 'fs-extra';
 import * as archiver from 'archiver';
+import { Response } from 'express';
+import { UpdateActivityDto } from 'src/activities/dto/update-activity.dto';
+import { Files } from 'src/activities/interfaces';
+import { File } from './entities/file.entity';
 
 @Injectable()
 export class FilesService {
@@ -17,7 +21,7 @@ export class FilesService {
     return this.prisma.files.create({ data: createFileDto });
   }
 
-  async uploadFile(file: Express.Multer.File, id: number, userId) {
+  async uploadFile(file: Express.Multer.File, userId: number, id?: number) {
     const { buffer: avatarFileBlob } = file;
     const buffer = Buffer.from(avatarFileBlob);
 
@@ -51,7 +55,11 @@ export class FilesService {
     return fileCreated;
   }
 
-  async uploadMultipleFiles(files, activityId, userId) {
+  async uploadMultipleFiles(
+    files: Array<Express.Multer.File>,
+    activityId: number,
+    userId: number,
+  ) {
     const filesCreated = [];
     for (const file of files) {
       const { buffer: avatarFileBlob } = file;
@@ -88,7 +96,9 @@ export class FilesService {
     return filesCreated;
   }
 
-  async downloadZipFiles(activity, res) {
+  const;
+
+  async downloadZipFiles(activity, res: Response) {
     try {
       const files = activity.files;
 
@@ -126,19 +136,23 @@ export class FilesService {
     }
   }
 
-  findAll() {
-    return `This action returns all files`;
+  async findAll(): Promise<File[]> {
+    return this.prisma.files.findMany();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} file`;
+  async findOne(id: number): Promise<File> {
+    return this.prisma.files.findUnique({ where: { id: +id } });
   }
 
-  update(id: number, updateFileDto: UpdateFileDto) {
-    return `This action updates a #${id} file`;
+  async update(id: number, updateFileDto: UpdateFileDto): Promise<File> {
+    const { activityId, ext, name, size, userId, path } = updateFileDto;
+    return this.prisma.files.update({
+      where: { id },
+      data: { activityId, ext, name, size, userId, path },
+    });
   }
 
-  remove(id: number) {
+  async remove(id: number) {
     return `This action removes a #${id} file`;
   }
 }

@@ -9,17 +9,21 @@ import {
   HttpStatus,
   HttpCode,
   HttpException,
-  Request,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
-import { UpdateCourseDto } from './dto/update-course.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { UsersService } from 'src/users/users.service';
+import { Course } from '@prisma/client';
 
 @Controller('courses')
 export class CoursesController {
-  constructor(private coursesService: CoursesService) {}
+  constructor(
+    private coursesService: CoursesService,
+    private userService: UsersService,
+  ) {}
 
   @UseGuards(AuthGuard)
   @Post()
@@ -31,7 +35,14 @@ export class CoursesController {
   @Post('/:id')
   async addStudant(@Param('id') courseId: number, @Body() { userId }) {
     try {
-      return this.coursesService.addStudentCourse(+courseId, +userId);
+      const user = await this.userService.findOne({ id: userId });
+      if (!user) {
+        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      }
+      return this.coursesService.addStudentCourse({
+        courseId: +courseId,
+        user,
+      });
     } catch (error) {
       throw new HttpException(error.message, error.status);
     }
@@ -39,31 +50,19 @@ export class CoursesController {
 
   @HttpCode(HttpStatus.OK)
   @Delete('/:id/removeStudantCourse')
-  async removeStudentCourse(@Param('id') userId: number) {
+  async removeStudentCourse(
+    @Param('id') id: string,
+    @Req() req: Response,
+  ): Promise<any> {
     try {
-      return this.coursesService.removeStudentCourse(+userId);
+      return this.coursesService.removeStudentCourse(req, +id);
     } catch (error) {
       throw new HttpException(error.message, error.status);
     }
   }
 
   @Get()
-  findAll() {
+  async findAll(): Promise<Course[]> {
     return this.coursesService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.coursesService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCourseDto: UpdateCourseDto) {
-    return this.coursesService.update(+id, updateCourseDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.coursesService.remove(+id);
   }
 }

@@ -49,6 +49,19 @@ DATABASE_PASSWORD=root
 DATABASE_URL="${DATABASE_PROVIDER}://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE}?schema=public"
 ```
 
+## Configure nodemailer email provider
+
+```js
+
+Configure with your .env with yours cofings regarding nodemailer provider:
+
+SMTP_HOST=smtp.ethereal.email
+SMTP_PORT=587
+SMTP_SECURITY=STARTLS
+SMTP_USERNAME=jon38@ethereal.email
+SMTP_PASSWORD=hMyjGYUjh71M8yttZ1
+```
+
 ## Created Database Tables by PRISMA ORM
 
 ```bash

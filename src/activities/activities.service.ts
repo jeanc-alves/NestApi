@@ -3,24 +3,35 @@ import { Body, Injectable, Param, UploadedFile } from '@nestjs/common';
 import { PrismaService } from 'src/database/prisma.service';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { Activities } from './interfaces';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ActivitiesService {
   constructor(private prisma: PrismaService) {}
 
   async create(@Body() data: CreateActivityDto) {
-    return this.prisma.activities.create({ data });
+    const { courseId, name, peso } = data;
+    return this.prisma.activities.create({
+      data: { courseId, name, peso },
+    });
   }
 
-  uploadFile(@Param('id') id, @UploadedFile() file: Express.Multer.File) {}
+  async uploadFile(
+    @Param('id') id,
+    @UploadedFile() file: Express.Multer.File,
+  ) {}
 
-  findAll(data: object) {
+  async findAll(data: object) {
     return this.prisma.activities.findMany(data);
   }
 
-  findOne(
+  async findOne(
     id: number,
-    data: { include: object; where: object; select: object },
+    data: {
+      include: Prisma.ActivitiesInclude;
+      select: Prisma.ActivitiesSelect;
+      where: { id?: number; email?: string };
+    },
   ): Promise<Activities> {
     const payload = { where: { id } };
 

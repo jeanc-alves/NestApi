@@ -1,4 +1,5 @@
-import { IsNotEmpty } from 'class-validator';
+import { Course } from '@prisma/client';
+import { IsInt, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class CreateActivityDto {
   @IsNotEmpty()
@@ -9,4 +10,10 @@ export class CreateActivityDto {
 
   @IsNotEmpty()
   peso: number;
+
+  @IsOptional()
+  course?: Course;
+
+  @IsOptional()
+  files?: File[];
 }
