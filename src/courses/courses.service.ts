@@ -1,9 +1,8 @@
 import { HttpException, HttpStatus, Injectable, Res } from '@nestjs/common';
 import { CreateCourseDto } from './dto/create-course.dto';
 
-import { PrismaService } from 'src/database/prisma.service';
-
 import { Course, User } from '@prisma/client';
+import { PrismaService } from 'src/database/prisma.service';
 
 export class addStudentDto {
   courseId: number;
