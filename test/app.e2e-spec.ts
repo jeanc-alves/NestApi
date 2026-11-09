@@ -8,6 +8,7 @@ process.env.RABBITMQ_URL =
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as request from 'supertest';
 import { randomUUID } from 'crypto';
 import { AppModule } from '../src/app.module';
@@ -23,6 +24,7 @@ describe('NestApi End-to-End Tests', () => {
   let idempotencyService: IdempotencyService;
   let adminToken: string;
   let studentToken: string;
+  let createdCourseId: number;
 
   const testEmailAdmin = `admin_${Date.now()}@test.com`;
   const testEmailStudent = `student_${Date.now()}@test.com`;
@@ -34,7 +36,20 @@ describe('NestApi End-to-End Tests', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api/v1', {
+      exclude: ['/', 'api/docs', 'api/docs-json'],
+    });
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('NestApi')
+      .setDescription('NestApi documentation')
+      .setVersion('1.0.0')
+      .addBearerAuth()
+      .build();
+    const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('api/docs', app, swaggerDocument);
+
     await app.init();
 
     prisma = app.get<PrismaService>(PrismaService);
@@ -48,6 +63,14 @@ describe('NestApi End-to-End Tests', () => {
         where: {
           email: { in: [testEmailAdmin, testEmailStudent] },
         },
+      });
+    }
+    if (prisma && prisma.course && createdCourseId) {
+      await prisma.activities.deleteMany({
+        where: { courseId: createdCourseId },
+      });
+      await prisma.course.deleteMany({
+        where: { id: createdCourseId },
       });
     }
     if (prisma && prisma.processedMessage && testMessageIds.length > 0) {
@@ -69,10 +92,23 @@ describe('NestApi End-to-End Tests', () => {
     });
   });
 
+  describe('Swagger Documentation (E2E)', () => {
+    it('GET /api/docs should serve Swagger UI HTML', async () => {
+      const response = await request(app.getHttpServer()).get('/api/docs/').expect(200);
+      expect(response.text).toContain('Swagger UI');
+    });
+
+    it('GET /api/docs-json should serve OpenAPI JSON schema', async () => {
+      const response = await request(app.getHttpServer()).get('/api/docs-json').expect(200);
+      expect(response.body).toHaveProperty('openapi');
+      expect(response.body.info.title).toBe('NestApi');
+    });
+  });
+
   describe('Auth Module (E2E)', () => {
-    it('POST /auth/register should create an admin user and omit password', async () => {
+    it('POST /api/v1/auth/register should create an admin user and omit password', async () => {
       const response = await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send({
           firstName: 'Admin',
           lastName: 'User',
@@ -88,9 +124,9 @@ describe('NestApi End-to-End Tests', () => {
       expect(response.body.password).toBeUndefined();
     });
 
-    it('POST /auth/register should create a student user', async () => {
+    it('POST /api/v1/auth/register should create a student user', async () => {
       const response = await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send({
           firstName: 'Student',
           lastName: 'One',
@@ -105,9 +141,9 @@ describe('NestApi End-to-End Tests', () => {
       expect(response.body.password).toBeUndefined();
     });
 
-    it('POST /auth/register should fail with 409 Conflict on duplicate email', async () => {
+    it('POST /api/v1/auth/register should fail with 409 Conflict on duplicate email', async () => {
       const response = await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send({
           firstName: 'Duplicate',
           email: testEmailAdmin,
@@ -118,9 +154,9 @@ describe('NestApi End-to-End Tests', () => {
       expect(response.body.statusCode).toBe(409);
     });
 
-    it('POST /auth/login should return JWT access_token and user without password', async () => {
+    it('POST /api/v1/auth/login should return JWT access_token and user without password', async () => {
       const response = await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({
           email: testEmailAdmin,
           password: 'SecretPassword123!',
@@ -136,9 +172,9 @@ describe('NestApi End-to-End Tests', () => {
       adminToken = response.body.access_token;
     });
 
-    it('POST /auth/login should authenticate student and obtain token', async () => {
+    it('POST /api/v1/auth/login should authenticate student and obtain token', async () => {
       const response = await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({
           email: testEmailStudent,
           password: 'StudentPassword123!',
@@ -149,9 +185,9 @@ describe('NestApi End-to-End Tests', () => {
       studentToken = response.body.access_token;
     });
 
-    it('POST /auth/login should return 401 Unauthorized with invalid password', async () => {
+    it('POST /api/v1/auth/login should return 401 Unauthorized with invalid password', async () => {
       const response = await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({
           email: testEmailAdmin,
           password: 'WrongPassword!',
@@ -163,22 +199,13 @@ describe('NestApi End-to-End Tests', () => {
   });
 
   describe('Authorization & Resource Protection (E2E)', () => {
-    it('GET /courses should return 401 Unauthorized without token', async () => {
-      await request(app.getHttpServer()).get('/courses').expect(401);
+    it('GET /api/v1/courses should return 401 Unauthorized without token', async () => {
+      await request(app.getHttpServer()).get('/api/v1/courses').expect(401);
     });
 
-    it('GET /courses should return 200 with valid token', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/courses')
-        .set('Authorization', `Bearer ${studentToken}`)
-        .expect(200);
-
-      expect(Array.isArray(response.body)).toBe(true);
-    });
-
-    it('POST /courses should return 403 Forbidden for non-admin student', async () => {
+    it('POST /api/v1/courses should return 403 Forbidden for non-admin student', async () => {
       await request(app.getHttpServer())
-        .post('/courses')
+        .post('/api/v1/courses')
         .set('Authorization', `Bearer ${studentToken}`)
         .send({
           name: 'Hacked Course',
@@ -188,9 +215,9 @@ describe('NestApi End-to-End Tests', () => {
         .expect(403);
     });
 
-    it('POST /courses should return 201 Created for authenticated ADMIN', async () => {
+    it('POST /api/v1/courses should return 201 Created for authenticated ADMIN', async () => {
       const response = await request(app.getHttpServer())
-        .post('/courses')
+        .post('/api/v1/courses')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           name: 'Engenharia de Software',
@@ -201,16 +228,65 @@ describe('NestApi End-to-End Tests', () => {
 
       expect(response.body.name).toBe('Engenharia de Software');
       expect(response.body.id).toBeDefined();
+      createdCourseId = response.body.id;
     });
 
-    it('GET /courses/:id should return 404 Not Found for non-existent course', async () => {
+    it('GET /api/v1/courses should return paginated result with meta', async () => {
       const response = await request(app.getHttpServer())
-        .get('/courses/999999')
+        .get('/api/v1/courses?page=1&limit=5')
+        .set('Authorization', `Bearer ${studentToken}`)
+        .expect(200);
+
+      expect(Array.isArray(response.body.items)).toBe(true);
+      expect(response.body.meta).toHaveProperty('total');
+      expect(response.body.meta.page).toBe(1);
+      expect(response.body.meta.limit).toBe(5);
+      expect(response.body.meta).toHaveProperty('totalPages');
+      expect(response.body.meta).toHaveProperty('hasNext');
+      expect(response.body.meta).toHaveProperty('hasPrev');
+    });
+
+    it('GET /api/v1/courses/:id should return 404 Not Found for non-existent course', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/courses/999999')
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(404);
 
       expect(response.body.statusCode).toBe(404);
       expect(response.body.message).toContain('Course not found');
+    });
+  });
+
+  describe('Secure Upload & MIME Validation (E2E)', () => {
+    it('POST /api/v1/activities should reject non-PDF file with forged extension', async () => {
+      const fakeExecutable = Buffer.from([0x4d, 0x5a, 0x90, 0x00]);
+
+      await request(app.getHttpServer())
+        .post('/api/v1/activities')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .field('name', 'Atividade Fake')
+        .field('courseId', createdCourseId)
+        .field('peso', 5)
+        .attach('files', fakeExecutable, 'virus.pdf')
+        .expect(400);
+    });
+
+    it('POST /api/v1/activities should accept valid PDF with magic number and dispatch event', async () => {
+      const validPdfBuffer = Buffer.from('%PDF-1.4 test content\n%%EOF');
+
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/activities')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .field('name', 'Trabalho de Arquitetura')
+        .field('courseId', createdCourseId)
+        .field('peso', 10)
+        .attach('files', validPdfBuffer, 'trabalho.pdf')
+        .expect(201);
+
+      expect(response.body).toHaveProperty('activity');
+      expect(response.body.activity.name).toBe('Trabalho de Arquitetura');
+      expect(response.body.files).toHaveLength(1);
+      expect(response.body.files[0].ext).toBe('pdf');
     });
   });
 

@@ -11,7 +11,15 @@ import {
   ParseFilePipeBuilder,
   HttpStatus,
   Res,
+  Query,
 } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { randomUUID } from 'crypto';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
@@ -26,7 +34,11 @@ import { RabbitMQService } from 'src/rabbittmq/rabbittmq.service';
 import { CoursesService } from 'src/courses/courses.service';
 import { IResponseCreateActivities } from './interfaces';
 import { ActivityCreatedEvent } from 'src/rabbittmq/contracts/activity-created.event';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { PaginatedResultDto } from 'src/common/dto/paginated-result.dto';
 
+@ApiTags('Activities')
+@ApiBearerAuth('JWT-auth')
 @Controller('activities')
 export class ActivitiesController {
   constructor(
@@ -38,6 +50,10 @@ export class ActivitiesController {
 
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(Profile.ADMIN)
+  @ApiOperation({ summary: 'Create an activity with optional PDF uploads (Admin only)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 201, description: 'Activity created and event dispatched' })
+  @ApiResponse({ status: 403, description: 'Forbidden for non-admin' })
   @Post()
   @UseInterceptors(AnyFilesInterceptor())
   async create(
@@ -106,18 +122,28 @@ export class ActivitiesController {
   }
 
   @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'List all activities with pagination' })
+  @ApiResponse({ status: 200, description: 'Paginated list of activities' })
   @Get()
-  async findAll(): Promise<Activities[]> {
-    return this.activitiesService.findAll();
+  async findAll(
+    @Query() pagination?: PaginationQueryDto,
+  ): Promise<PaginatedResultDto<Activities>> {
+    return this.activitiesService.findAllPaginated(pagination);
   }
 
   @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'Find activity by ID' })
+  @ApiResponse({ status: 200, description: 'Activity details' })
+  @ApiResponse({ status: 404, description: 'Activity not found' })
   @Get(':id')
   async findOne(@Param('id') id: string): Promise<Activities> {
     return this.activitiesService.findOneOrFail(Number(id));
   }
 
   @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'Stream and download all activity PDFs as a single ZIP archive' })
+  @ApiResponse({ status: 200, description: 'ZIP archive binary stream' })
+  @ApiResponse({ status: 404, description: 'No files found for this activity' })
   @Get(':id/download-files')
   async downloadFiles(
     @Param('id') id: string,

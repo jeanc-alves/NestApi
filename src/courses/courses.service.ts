@@ -6,6 +6,8 @@ import {
 import { Course, Prisma, User } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
 import { CreateCourseDto } from './dto/create-course.dto';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { PaginatedResultDto } from 'src/common/dto/paginated-result.dto';
 
 export type CourseWithRelations = Prisma.CourseGetPayload<{
   include: { users: true; activities: true };
@@ -69,6 +71,26 @@ export class CoursesService {
     return this.prisma.course.findMany({
       include: { users: true, activities: true },
     });
+  }
+
+  async findAllPaginated(
+    pagination?: PaginationQueryDto,
+  ): Promise<PaginatedResultDto<CourseWithRelations>> {
+    const page = Number(pagination?.page) || 1;
+    const limit = Number(pagination?.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const [total, items] = await Promise.all([
+      this.prisma.course.count(),
+      this.prisma.course.findMany({
+        skip,
+        take: limit,
+        include: { users: true, activities: true },
+        orderBy: { id: 'asc' },
+      }),
+    ]);
+
+    return new PaginatedResultDto(items, total, page, limit);
   }
 
   async findOne(id: number): Promise<CourseWithRelations | null> {
