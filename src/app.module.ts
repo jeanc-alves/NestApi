@@ -8,7 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { CoursesModule } from './courses/courses.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { FilesModule } from './files/files.module';
-import { RabbitMQService } from './rabbittmq/rabbittmq.service';
+import { RabbitMQModule } from './rabbittmq/rabbittmq.module';
 import { EmailModule } from './email/email.module';
 import { validate } from './config/env.validation';
 import { HttpExceptionFilter } from './filters/http-exception.filter';
@@ -20,6 +20,7 @@ import { PrismaClientExceptionFilter } from './filters/prisma-client-exception.f
       isGlobal: true,
       validate,
     }),
+    RabbitMQModule,
     UsersModule,
     AuthModule,
     CoursesModule,
@@ -30,7 +31,6 @@ import { PrismaClientExceptionFilter } from './filters/prisma-client-exception.f
   controllers: [AppController],
   providers: [
     PrismaService,
-    RabbitMQService,
     {
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,

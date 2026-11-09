@@ -59,3 +59,10 @@ model Files {
   activityId      Int?
   activity Activities? @relation(fields: [activityId], references: [id])
 }
+
+model ProcessedMessage {
+  id          String   @id
+  queue       String
+  eventType   String
+  processedAt DateTime @default(now())
+}

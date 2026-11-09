@@ -5,12 +5,12 @@ import { ActivitiesController } from './activities.controller';
 import { ActivitiesService } from './activities.service';
 import { FilesService } from 'src/files/files.service';
 import { RabbitMQService } from 'src/rabbittmq/rabbittmq.service';
-import { EmailService } from 'src/email/email.service';
 import { CoursesService } from 'src/courses/courses.service';
 
 describe('ActivitiesController', () => {
   let controller: ActivitiesController;
   let activitiesService: jest.Mocked<Partial<ActivitiesService>>;
+  let mockRabbitMQ: any;
 
   const mockActivity = {
     id: 1,
@@ -26,6 +26,13 @@ describe('ActivitiesController', () => {
       findAll: jest.fn().mockResolvedValue([mockActivity]),
       findOneOrFail: jest.fn().mockResolvedValue(mockActivity),
       create: jest.fn().mockResolvedValue(mockActivity),
+    };
+
+    mockRabbitMQ = {
+      publish: jest.fn().mockResolvedValue(true),
+      initialize: jest.fn().mockResolvedValue(undefined),
+      sendMessage: jest.fn().mockResolvedValue(undefined),
+      closeConnection: jest.fn().mockResolvedValue(undefined),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -44,17 +51,7 @@ describe('ActivitiesController', () => {
         },
         {
           provide: RabbitMQService,
-          useValue: {
-            initialize: jest.fn().mockResolvedValue(undefined),
-            sendMessage: jest.fn().mockResolvedValue(undefined),
-            closeConnection: jest.fn().mockResolvedValue(undefined),
-          },
-        },
-        {
-          provide: EmailService,
-          useValue: {
-            sendMail: jest.fn().mockResolvedValue({ messageId: '123' }),
-          },
+          useValue: mockRabbitMQ,
         },
         {
           provide: CoursesService,
@@ -62,7 +59,9 @@ describe('ActivitiesController', () => {
             findOneOrFail: jest.fn().mockResolvedValue({
               id: 10,
               name: 'Curso 1',
-              users: [],
+              users: [
+                { id: 1, firstName: 'João', lastName: 'Silva', email: 'joao@test.com' },
+              ],
             }),
           },
         },
@@ -82,6 +81,37 @@ describe('ActivitiesController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  describe('create', () => {
+    it('should create activity and publish typed event with messageId to rabbitmq', async () => {
+      const result = await controller.create(
+        [],
+        { name: 'Prova 1', courseId: '10', peso: '2' } as any,
+        { user: { sub: 1 } },
+      );
+
+      expect(activitiesService.create).toHaveBeenCalledWith({
+        name: 'Prova 1',
+        courseId: 10,
+        peso: 2,
+      });
+
+      expect(mockRabbitMQ.publish).toHaveBeenCalledWith(
+        RabbitMQService.DEFAULT_QUEUE,
+        expect.objectContaining({
+          messageId: expect.any(String),
+          eventType: 'activity.created',
+          data: expect.objectContaining({
+            activityId: 1,
+            courseName: 'Curso 1',
+            students: [{ id: 1, name: 'João Silva', email: 'joao@test.com' }],
+          }),
+        }),
+      );
+
+      expect(result.email_sent_to).toEqual(['joao@test.com']);
+    });
   });
 
   describe('findAll', () => {
