@@ -1,41 +1,37 @@
-import { Body, Injectable } from '@nestjs/common';
-
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/database/prisma.service';
 import { CreateActivityDto } from './dto/create-activity.dto';
-import { Activities } from './interfaces';
-import { Prisma } from '@prisma/client';
+import { Activities } from '@prisma/client';
 
 @Injectable()
 export class ActivitiesService {
   constructor(private prisma: PrismaService) {}
 
-  async create(@Body() data: CreateActivityDto) {
+  async create(data: CreateActivityDto): Promise<Activities> {
     const { courseId, name, peso } = data;
     return this.prisma.activities.create({
       data: { courseId, name, peso },
     });
   }
 
-  async findAll(data: object) {
-    return this.prisma.activities.findMany(data);
+  async findAll(): Promise<Activities[]> {
+    return this.prisma.activities.findMany({
+      include: { files: true, course: true },
+    });
   }
 
-  async findOne(
-    id: number,
-    data: {
-      include: Prisma.ActivitiesInclude;
-      select: Prisma.ActivitiesSelect;
-      where: { id?: number; email?: string };
-    },
-  ): Promise<Activities> {
-    const payload = { where: { id } };
+  async findOne(id: number): Promise<Activities | null> {
+    return this.prisma.activities.findUnique({
+      where: { id },
+      include: { files: true, course: true },
+    });
+  }
 
-    if (data.include) {
-      payload['include'] = data.include;
+  async findOneOrFail(id: number): Promise<Activities> {
+    const activity = await this.findOne(id);
+    if (!activity) {
+      throw new NotFoundException('Activity not found');
     }
-    if (data.select) {
-      payload['select'] = data.select;
-    }
-    return this.prisma.activities.findUnique(payload);
+    return activity;
   }
 }
