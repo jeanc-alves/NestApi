@@ -21,9 +21,22 @@ describe('ActivitiesController', () => {
     course: null,
   };
 
+  const mockPaginated = {
+    items: [mockActivity],
+    meta: {
+      total: 1,
+      page: 1,
+      limit: 10,
+      totalPages: 1,
+      hasNext: false,
+      hasPrev: false,
+    },
+  };
+
   beforeEach(async () => {
     activitiesService = {
       findAll: jest.fn().mockResolvedValue([mockActivity]),
+      findAllPaginated: jest.fn().mockResolvedValue(mockPaginated as any),
       findOneOrFail: jest.fn().mockResolvedValue(mockActivity),
       create: jest.fn().mockResolvedValue(mockActivity),
     };
@@ -115,10 +128,10 @@ describe('ActivitiesController', () => {
   });
 
   describe('findAll', () => {
-    it('should return all activities', async () => {
-      const result = await controller.findAll();
-      expect(result).toEqual([mockActivity]);
-      expect(activitiesService.findAll).toHaveBeenCalled();
+    it('should return paginated activities', async () => {
+      const result = await controller.findAll({ page: 1, limit: 10 });
+      expect(result).toEqual(mockPaginated);
+      expect(activitiesService.findAllPaginated).toHaveBeenCalledWith({ page: 1, limit: 10 });
     });
   });
 

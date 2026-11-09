@@ -22,6 +22,7 @@ describe('CoursesService', () => {
         findUnique: jest.fn(),
         findMany: jest.fn(),
         create: jest.fn(),
+        count: jest.fn().mockResolvedValue(1),
       } as any,
       user: {
         findUnique: jest.fn(),
@@ -60,23 +61,57 @@ describe('CoursesService', () => {
     });
   });
 
+  describe('findAllPaginated', () => {
+    it('should return paginated result with meta', async () => {
+      (prisma.course.findMany as jest.Mock).mockResolvedValue([mockCourse]);
+      (prisma.course.count as jest.Mock).mockResolvedValue(15);
+
+      const result = await service.findAllPaginated({ page: 1, limit: 10 });
+
+      expect(result.items).toEqual([mockCourse]);
+      expect(result.meta).toEqual({
+        total: 15,
+        page: 1,
+        limit: 10,
+        totalPages: 2,
+        hasNext: true,
+        hasPrev: false,
+      });
+    });
+  });
+
+  describe('create', () => {
+    it('should create a course successfully', async () => {
+      (prisma.course.create as jest.Mock).mockResolvedValue(mockCourse);
+
+      const result = await service.create({
+        name: 'NestJS Masterclass',
+        sector: 'Technology',
+        duration: 40,
+      });
+
+      expect(result).toEqual(mockCourse);
+      expect(prisma.course.create).toHaveBeenCalled();
+    });
+  });
+
   describe('addStudentCourse', () => {
-    it('should throw NotFoundException when student does not exist', async () => {
+    it('should throw NotFoundException if user is not found', async () => {
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
 
       await expect(
-        service.addStudentCourse({ courseId: 1, userId: 999 }),
+        service.addStudentCourse({ courseId: 1, userId: 99 }),
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw BadRequestException when student already has a course', async () => {
+    it('should throw BadRequestException if user is already in a course', async () => {
       (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-        id: 1,
+        id: 10,
         courseId: 2,
       });
 
       await expect(
-        service.addStudentCourse({ courseId: 1, userId: 1 }),
+        service.addStudentCourse({ courseId: 1, userId: 10 }),
       ).rejects.toThrow(BadRequestException);
     });
   });

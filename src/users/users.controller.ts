@@ -19,6 +19,13 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { Profile } from '@prisma/client';
@@ -31,6 +38,8 @@ import { RoleGuard } from 'src/role/role.guard';
 import { Roles } from 'src/role/roles.decorator';
 import { FilesService } from 'src/files/files.service';
 
+@ApiTags('Users')
+@ApiBearerAuth('JWT-auth')
 @Controller('users')
 @UseInterceptors(ClassSerializerInterceptor)
 export class UsersController {
@@ -41,24 +50,35 @@ export class UsersController {
 
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(Profile.ADMIN)
+  @ApiOperation({ summary: 'Create user manually (Admin only)' })
+  @ApiResponse({ status: 201, description: 'User created successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden for non-admin' })
   @Post()
   async create(@Body() createUserDto: CreateUserDto): Promise<UserEntity> {
     return this.usersService.create(createUserDto);
   }
 
   @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'List all users' })
+  @ApiResponse({ status: 200, description: 'List of users with passwords omitted' })
   @Get()
   async findAll(): Promise<UserEntity[]> {
     return this.usersService.findAll();
   }
 
   @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'Get user profile by ID' })
+  @ApiResponse({ status: 200, description: 'User profile details' })
+  @ApiResponse({ status: 404, description: 'User not found' })
   @Get(':id')
   async findOne(@Param('id') id: string): Promise<UserEntity> {
     return this.usersService.findOneOrFail({ id: Number(id) });
   }
 
   @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'Update user profile (Self or Admin only)' })
+  @ApiResponse({ status: 200, description: 'User updated successfully' })
+  @ApiResponse({ status: 403, description: 'Cannot update another user' })
   @Patch(':id')
   async update(
     @Request() req,
@@ -74,6 +94,8 @@ export class UsersController {
 
   @UseGuards(AuthGuard, RoleGuard)
   @Roles(Profile.ADMIN)
+  @ApiOperation({ summary: 'Delete user by ID (Admin only)' })
+  @ApiResponse({ status: 200, description: 'User deleted' })
   @Delete(':id')
   async remove(@Param('id') id: string): Promise<{ message: string }> {
     await this.usersService.remove(Number(id));
@@ -81,6 +103,9 @@ export class UsersController {
   }
 
   @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'Upload avatar image' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 200, description: 'Avatar uploaded and profile updated' })
   @Post(':id/avatar')
   @UseInterceptors(AnyFilesInterceptor())
   async uploadAvatar(
@@ -107,6 +132,9 @@ export class UsersController {
   }
 
   @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'Retrieve or download user avatar image' })
+  @ApiResponse({ status: 200, description: 'Avatar binary file' })
+  @ApiResponse({ status: 404, description: 'Avatar not found' })
   @Get(':id/avatar')
   async getAvatar(
     @Param('id') id: string,

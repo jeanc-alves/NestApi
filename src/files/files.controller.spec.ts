@@ -1,4 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { JwtService } from '@nestjs/jwt';
+import { Reflector } from '@nestjs/core';
 import { FilesController } from './files.controller';
 import { FilesService } from './files.service';
 
@@ -21,6 +23,14 @@ describe('FilesController', () => {
         {
           provide: FilesService,
           useValue: filesService,
+        },
+        {
+          provide: JwtService,
+          useValue: { verifyAsync: jest.fn() },
+        },
+        {
+          provide: Reflector,
+          useValue: { getAllAndOverride: jest.fn() },
         },
       ],
     }).compile();

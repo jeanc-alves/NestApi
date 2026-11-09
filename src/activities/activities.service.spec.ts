@@ -22,6 +22,7 @@ describe('ActivitiesService', () => {
         create: jest.fn(),
         findMany: jest.fn(),
         findUnique: jest.fn(),
+        count: jest.fn().mockResolvedValue(1),
       } as any,
     };
 
@@ -50,32 +51,46 @@ describe('ActivitiesService', () => {
 
       expect(result).toEqual(mockActivity);
       expect(prisma.activities.create).toHaveBeenCalledWith({
-        data: { name: 'Exercicio Pratico NestJS', courseId: 10, peso: 2 },
+        data: {
+          name: 'Exercicio Pratico NestJS',
+          courseId: 10,
+          peso: 2,
+        },
       });
     });
   });
 
-  describe('findAll', () => {
-    it('should return array of activities', async () => {
+  describe('findAllPaginated', () => {
+    it('should return paginated activities with meta', async () => {
       (prisma.activities.findMany as jest.Mock).mockResolvedValue([mockActivity]);
+      (prisma.activities.count as jest.Mock).mockResolvedValue(5);
 
-      const result = await service.findAll();
+      const result = await service.findAllPaginated({ page: 1, limit: 10 });
 
-      expect(result).toHaveLength(1);
-      expect(result[0]).toEqual(mockActivity);
+      expect(result.items).toEqual([mockActivity]);
+      expect(result.meta).toEqual({
+        total: 5,
+        page: 1,
+        limit: 10,
+        totalPages: 1,
+        hasNext: false,
+        hasPrev: false,
+      });
     });
   });
 
   describe('findOneOrFail', () => {
     it('should return activity when found', async () => {
-      (prisma.activities.findUnique as jest.Mock).mockResolvedValue(mockActivity);
+      (prisma.activities.findUnique as jest.Mock).mockResolvedValue(
+        mockActivity,
+      );
 
       const result = await service.findOneOrFail(1);
 
       expect(result).toEqual(mockActivity);
     });
 
-    it('should throw NotFoundException when activity is null', async () => {
+    it('should throw NotFoundException when activity is not found', async () => {
       (prisma.activities.findUnique as jest.Mock).mockResolvedValue(null);
 
       await expect(service.findOneOrFail(999)).rejects.toThrow(

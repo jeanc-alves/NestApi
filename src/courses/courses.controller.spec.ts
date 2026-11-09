@@ -17,10 +17,23 @@ describe('CoursesController', () => {
     activities: [],
   };
 
+  const mockPaginated = {
+    items: [mockCourse],
+    meta: {
+      total: 1,
+      page: 1,
+      limit: 10,
+      totalPages: 1,
+      hasNext: false,
+      hasPrev: false,
+    },
+  };
+
   beforeEach(async () => {
     coursesService = {
       create: jest.fn().mockResolvedValue(mockCourse),
       findAll: jest.fn().mockResolvedValue([mockCourse]),
+      findAllPaginated: jest.fn().mockResolvedValue(mockPaginated as any),
       findOneOrFail: jest.fn().mockResolvedValue(mockCourse),
       addStudentCourse: jest.fn().mockResolvedValue(mockCourse),
       removeStudentCourse: jest.fn().mockResolvedValue({ id: 2, courseId: null } as any),
@@ -52,15 +65,15 @@ describe('CoursesController', () => {
   });
 
   describe('findAll', () => {
-    it('should return all courses', async () => {
-      const result = await controller.findAll();
-      expect(result).toEqual([mockCourse]);
-      expect(coursesService.findAll).toHaveBeenCalled();
+    it('should return paginated courses', async () => {
+      const result = await controller.findAll({ page: 1, limit: 10 });
+      expect(result).toEqual(mockPaginated);
+      expect(coursesService.findAllPaginated).toHaveBeenCalledWith({ page: 1, limit: 10 });
     });
   });
 
   describe('findOne', () => {
-    it('should return a course by id', async () => {
+    it('should return course by id', async () => {
       const result = await controller.findOne('1');
       expect(result).toEqual(mockCourse);
       expect(coursesService.findOneOrFail).toHaveBeenCalledWith(1);
