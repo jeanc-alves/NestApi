@@ -5,69 +5,54 @@ import {
   Body,
   Param,
   Delete,
-  HttpStatus,
   HttpCode,
-  HttpException,
+  HttpStatus,
   UseGuards,
-  Req,
 } from '@nestjs/common';
-import { CoursesService } from './courses.service';
+import { Course, User } from '@prisma/client';
+import { CoursesService, CourseWithRelations } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
-import { UsersService } from 'src/users/users.service';
-import { Course } from '@prisma/client';
 import { RoleGuard } from 'src/role/role.guard';
 
 @Controller('courses')
 export class CoursesController {
-  constructor(
-    private coursesService: CoursesService,
-    private userService: UsersService,
-  ) {}
-  @UseGuards(RoleGuard)
-  @UseGuards(AuthGuard)
+  constructor(private readonly coursesService: CoursesService) {}
+
+  @UseGuards(AuthGuard, RoleGuard)
   @Post()
-  create(@Body() createCourseDto: CreateCourseDto) {
+  async create(@Body() createCourseDto: CreateCourseDto): Promise<Course> {
     return this.coursesService.create(createCourseDto);
   }
+
   @UseGuards(AuthGuard)
-  @UseGuards(RoleGuard)
-  @HttpCode(HttpStatus.OK)
-  @Post('/:id')
-  async addStudant(
-    @Param('id') courseId: number,
-    @Body() { userId },
-  ): Promise<Course | HttpException> {
-    try {
-      const user = await this.userService.findOne({ id: userId });
-      if (!user) {
-        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
-      }
-      return this.coursesService.addStudentCourse({
-        courseId: +courseId,
-        user,
-      });
-    } catch (error) {
-      throw new HttpException(error.message, error.status);
-    }
-  }
-  @UseGuards(AuthGuard)
-  @UseGuards(RoleGuard)
-  @HttpCode(HttpStatus.OK)
-  @Delete('/:id/removeStudantCourse')
-  async removeStudentCourse(
-    @Param('id') id: string,
-    @Req() req: Response,
-  ): Promise<any> {
-    try {
-      return this.coursesService.removeStudentCourse(req, +id);
-    } catch (error) {
-      throw new HttpException(error.message, error.status);
-    }
+  @Get()
+  async findAll(): Promise<CourseWithRelations[]> {
+    return this.coursesService.findAll();
   }
 
-  @Get()
-  async findAll(): Promise<Course[]> {
-    return this.coursesService.findAll();
+  @UseGuards(AuthGuard)
+  @Get(':id')
+  async findOne(@Param('id') id: string): Promise<CourseWithRelations> {
+    return this.coursesService.findOneOrFail(Number(id));
+  }
+
+  @UseGuards(AuthGuard, RoleGuard)
+  @HttpCode(HttpStatus.OK)
+  @Post(':id/students')
+  async addStudent(
+    @Param('id') courseId: string,
+    @Body('userId') userId: number,
+  ): Promise<CourseWithRelations> {
+    return this.coursesService.addStudentCourse({
+      courseId: Number(courseId),
+      userId: Number(userId),
+    });
+  }
+
+  @UseGuards(AuthGuard, RoleGuard)
+  @Delete('students/:userId')
+  async removeStudent(@Param('userId') userId: string): Promise<User> {
+    return this.coursesService.removeStudentCourse(Number(userId));
   }
 }

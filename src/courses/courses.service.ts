@@ -1,12 +1,19 @@
-import { HttpException, HttpStatus, Injectable, Res } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Course, Prisma, User } from '@prisma/client';
+import { PrismaService } from 'src/database/prisma.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 
-import { Course, User } from '@prisma/client';
-import { PrismaService } from 'src/database/prisma.service';
+export type CourseWithRelations = Prisma.CourseGetPayload<{
+  include: { users: true; activities: true };
+}>;
 
-export class addStudentDto {
+export interface AddStudentDto {
   courseId: number;
-  user?: User;
+  userId: number;
 }
 
 @Injectable()
@@ -17,60 +24,65 @@ export class CoursesService {
     return this.prisma.course.create({ data: createCourseDto });
   }
 
-  async addStudentCourse({ courseId, user }: addStudentDto): Promise<Course> {
+  async addStudentCourse({
+    courseId,
+    userId,
+  }: AddStudentDto): Promise<CourseWithRelations> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
     if (user.courseId) {
-      throw new HttpException(
-        'User have a registered course',
-        HttpStatus.UNAUTHORIZED,
-      );
+      throw new BadRequestException('User is already registered in a course');
     }
-    const course = await this.prisma.course.findFirst({
-      where: { id: courseId },
-      include: { users: true },
-    });
-    if (!course) {
-      throw new HttpException('Course Not Found', HttpStatus.NOT_FOUND);
-    }
+
+    await this.findOneOrFail(courseId);
+
     await this.prisma.user.update({
-      where: { id: user.id },
-      data: { courseId: courseId },
-      include: { course: true },
+      where: { id: userId },
+      data: { courseId },
     });
 
-    return this.prisma.course.findFirst({
-      where: { id: courseId },
-      include: { users: true },
-    });
+    return this.findOneOrFail(courseId);
   }
 
-  async removeStudentCourse(@Res() res, userId?: number): Promise<User | any> {
-    try {
-      const existStudantCourse = await this.prisma.user.findFirst({
-        where: { id: userId },
-        include: { course: true },
-      });
-
-      if (existStudantCourse.course) {
-        return this.prisma.user.update({
-          where: { id: userId },
-          data: {
-            courseId: null,
-          },
-        });
-      }
-      return res.status(HttpStatus.NO_CONTENT);
-    } catch (error) {
-      if (error.code === 'P2025') {
-        throw new HttpException(error.meta.cause, HttpStatus.NOT_FOUND);
-      }
-      throw new HttpException(error.message, error.status);
+  async removeStudentCourse(userId: number): Promise<User> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
     }
+    if (!user.courseId) {
+      throw new BadRequestException('User is not registered in any course');
+    }
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { courseId: null },
+    });
   }
 
-  async findAll(): Promise<Course[]> {
-    return this.prisma.course.findMany({ include: { users: true } });
+  async findAll(): Promise<CourseWithRelations[]> {
+    return this.prisma.course.findMany({
+      include: { users: true, activities: true },
+    });
   }
-  findOne(id: number): Promise<Course | null> {
-    return this.prisma.course.findUnique({ where: { id } });
+
+  async findOne(id: number): Promise<CourseWithRelations | null> {
+    return this.prisma.course.findUnique({
+      where: { id },
+      include: { users: true, activities: true },
+    });
+  }
+
+  async findOneOrFail(id: number): Promise<CourseWithRelations> {
+    const course = await this.findOne(id);
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+    return course;
   }
 }
