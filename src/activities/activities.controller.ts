@@ -12,19 +12,20 @@ import {
   HttpStatus,
   Res,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
-import { Activities } from '@prisma/client';
+import { Activities, Profile } from '@prisma/client';
 import { ActivitiesService } from './activities.service';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { RoleGuard } from 'src/role/role.guard';
+import { Roles } from 'src/role/roles.decorator';
 import { FilesService } from 'src/files/files.service';
 import { RabbitMQService } from 'src/rabbittmq/rabbittmq.service';
-import { EmailService } from 'src/email/email.service';
 import { CoursesService } from 'src/courses/courses.service';
-import { html } from '../resources/ActivitiesCreatedEmail';
 import { IResponseCreateActivities } from './interfaces';
+import { ActivityCreatedEvent } from 'src/rabbittmq/contracts/activity-created.event';
 
 @Controller('activities')
 export class ActivitiesController {
@@ -32,11 +33,11 @@ export class ActivitiesController {
     private readonly activitiesService: ActivitiesService,
     private readonly filesService: FilesService,
     private readonly rabbitMQService: RabbitMQService,
-    private readonly emailService: EmailService,
     private readonly courseService: CoursesService,
   ) {}
 
   @UseGuards(AuthGuard, RoleGuard)
+  @Roles(Profile.ADMIN)
   @Post()
   @UseInterceptors(AnyFilesInterceptor())
   async create(
@@ -72,33 +73,34 @@ export class ActivitiesController {
       activity.id,
     );
 
-    await this.rabbitMQService.initialize('new_activities_created');
-    await this.rabbitMQService.sendMessage(
-      JSON.stringify(activityWithDetails),
-      'new_activities_created',
-    );
-    await this.rabbitMQService.closeConnection();
+    const students = (course.users || []).map((student) => ({
+      id: student.id,
+      name: `${student.firstName} ${student.lastName || ''}`.trim(),
+      email: student.email,
+    }));
 
-    const emails = [];
-    if (course.users && course.users.length > 0) {
-      for (const student of course.users) {
-        const studentName = `${student.firstName} ${
-          student.lastName || ''
-        }`.trim();
-        const emailResult = await this.emailService.sendMail({
-          from: 'noreply@nestapi.com',
-          to: student.email,
-          html: html(studentName, course.name),
-          subject: 'Nova atividade criada',
-          text: `Nova atividade ${activity.name} adicionada no curso ${course.name}`,
-        });
-        emails.push(emailResult);
-      }
-    }
+    const event: ActivityCreatedEvent = {
+      messageId: randomUUID(),
+      eventType: 'activity.created',
+      timestamp: new Date().toISOString(),
+      data: {
+        activityId: activity.id,
+        activityName: activity.name,
+        courseId: course.id,
+        courseName: course.name,
+        peso: activity.peso,
+        students,
+      },
+    };
+
+    await this.rabbitMQService.publish(
+      RabbitMQService.DEFAULT_QUEUE,
+      event,
+    );
 
     return {
       activity: activityWithDetails,
-      email_sent_to: emails,
+      email_sent_to: students.map((s) => s.email),
       files: uploadedFiles,
     };
   }

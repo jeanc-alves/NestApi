@@ -9,17 +9,24 @@ process.env.RABBITMQ_URL =
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
+import { randomUUID } from 'crypto';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/database/prisma.service';
+import { RabbitMQService } from '../src/rabbittmq/rabbittmq.service';
+import { IdempotencyService } from '../src/rabbittmq/idempotency.service';
+import { ActivityCreatedEvent } from '../src/rabbittmq/contracts/activity-created.event';
 
 describe('NestApi End-to-End Tests', () => {
   let app: INestApplication;
   let prisma: PrismaService;
+  let rabbitMQService: RabbitMQService;
+  let idempotencyService: IdempotencyService;
   let adminToken: string;
   let studentToken: string;
 
   const testEmailAdmin = `admin_${Date.now()}@test.com`;
   const testEmailStudent = `student_${Date.now()}@test.com`;
+  const testMessageIds: string[] = [];
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -31,6 +38,8 @@ describe('NestApi End-to-End Tests', () => {
     await app.init();
 
     prisma = app.get<PrismaService>(PrismaService);
+    rabbitMQService = app.get<RabbitMQService>(RabbitMQService);
+    idempotencyService = app.get<IdempotencyService>(IdempotencyService);
   });
 
   afterAll(async () => {
@@ -38,6 +47,13 @@ describe('NestApi End-to-End Tests', () => {
       await prisma.user.deleteMany({
         where: {
           email: { in: [testEmailAdmin, testEmailStudent] },
+        },
+      });
+    }
+    if (prisma && prisma.processedMessage && testMessageIds.length > 0) {
+      await prisma.processedMessage.deleteMany({
+        where: {
+          id: { in: testMessageIds },
         },
       });
     }
@@ -59,13 +75,16 @@ describe('NestApi End-to-End Tests', () => {
         .post('/auth/register')
         .send({
           firstName: 'Admin',
+          lastName: 'User',
           email: testEmailAdmin,
-          password: 'supersecretpassword123',
+          password: 'SecretPassword123!',
           profile: 'ADMIN',
         })
         .expect(201);
 
+      expect(response.body).toHaveProperty('id');
       expect(response.body.email).toBe(testEmailAdmin);
+      expect(response.body.profile).toBe('ADMIN');
       expect(response.body.password).toBeUndefined();
     });
 
@@ -74,25 +93,29 @@ describe('NestApi End-to-End Tests', () => {
         .post('/auth/register')
         .send({
           firstName: 'Student',
+          lastName: 'One',
           email: testEmailStudent,
-          password: 'studentpassword123',
+          password: 'StudentPassword123!',
           profile: 'ALUNO',
         })
         .expect(201);
 
       expect(response.body.email).toBe(testEmailStudent);
+      expect(response.body.profile).toBe('ALUNO');
       expect(response.body.password).toBeUndefined();
     });
 
     it('POST /auth/register should fail with 409 Conflict on duplicate email', async () => {
-      await request(app.getHttpServer())
+      const response = await request(app.getHttpServer())
         .post('/auth/register')
         .send({
           firstName: 'Duplicate',
           email: testEmailAdmin,
-          password: 'supersecretpassword123',
+          password: 'AnotherPassword123!',
         })
         .expect(409);
+
+      expect(response.body.statusCode).toBe(409);
     });
 
     it('POST /auth/login should return JWT access_token and user without password', async () => {
@@ -100,13 +123,16 @@ describe('NestApi End-to-End Tests', () => {
         .post('/auth/login')
         .send({
           email: testEmailAdmin,
-          password: 'supersecretpassword123',
+          password: 'SecretPassword123!',
         })
         .expect(200);
 
-      expect(response.body.access_token).toBeDefined();
-      expect(response.body.user).toBeDefined();
+      expect(response.body).toHaveProperty('access_token');
+      expect(typeof response.body.access_token).toBe('string');
+      expect(response.body).toHaveProperty('user');
+      expect(response.body.user.email).toBe(testEmailAdmin);
       expect(response.body.user.password).toBeUndefined();
+
       adminToken = response.body.access_token;
     });
 
@@ -115,7 +141,7 @@ describe('NestApi End-to-End Tests', () => {
         .post('/auth/login')
         .send({
           email: testEmailStudent,
-          password: 'studentpassword123',
+          password: 'StudentPassword123!',
         })
         .expect(200);
 
@@ -124,13 +150,15 @@ describe('NestApi End-to-End Tests', () => {
     });
 
     it('POST /auth/login should return 401 Unauthorized with invalid password', async () => {
-      await request(app.getHttpServer())
+      const response = await request(app.getHttpServer())
         .post('/auth/login')
         .send({
           email: testEmailAdmin,
-          password: 'wrong_password',
+          password: 'WrongPassword!',
         })
         .expect(401);
+
+      expect(response.body.statusCode).toBe(401);
     });
   });
 
@@ -183,6 +211,64 @@ describe('NestApi End-to-End Tests', () => {
 
       expect(response.body.statusCode).toBe(404);
       expect(response.body.message).toContain('Course not found');
+    });
+  });
+
+  describe('RabbitMQ Messaging & Idempotency (E2E)', () => {
+    it('should have connection and active channel initialized', () => {
+      expect(rabbitMQService.getConnection()).toBeDefined();
+      expect(rabbitMQService.getChannel()).toBeDefined();
+    });
+
+    it('should enforce idempotency preventing duplicate event processing', async () => {
+      const messageId = randomUUID();
+      testMessageIds.push(messageId);
+
+      const before = await idempotencyService.isProcessed(messageId);
+      expect(before).toBe(false);
+
+      await idempotencyService.markAsProcessed(
+        messageId,
+        RabbitMQService.DEFAULT_QUEUE,
+        'activity.created',
+      );
+
+      const after = await idempotencyService.isProcessed(messageId);
+      expect(after).toBe(true);
+
+      const persisted = await prisma.processedMessage.findUnique({
+        where: { id: messageId },
+      });
+      expect(persisted).toBeDefined();
+      expect(persisted?.queue).toBe(RabbitMQService.DEFAULT_QUEUE);
+      expect(persisted?.eventType).toBe('activity.created');
+    });
+
+    it('should successfully publish typed message to queue with persistent header', async () => {
+      const messageId = randomUUID();
+      testMessageIds.push(messageId);
+
+      const event: ActivityCreatedEvent = {
+        messageId,
+        eventType: 'activity.created',
+        timestamp: new Date().toISOString(),
+        data: {
+          activityId: 99,
+          activityName: 'E2E Atividade',
+          courseId: 1,
+          courseName: 'Engenharia',
+          peso: 10,
+          students: [{ id: 1, name: 'Aluno', email: 'aluno@e2e.com' }],
+        },
+      };
+
+      const published = await rabbitMQService.publish(
+        RabbitMQService.DEFAULT_QUEUE,
+        event,
+        { 'x-correlation-id': messageId },
+      );
+
+      expect(published).toBe(true);
     });
   });
 });
