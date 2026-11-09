@@ -1,11 +1,13 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-
-import { UsersService } from 'src/users/users.service';
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { jwtConstants } from './constants';
-import { CreateUserDto } from 'src/users/dto/create-user.dto';
-
 import * as bcrypt from 'bcrypt';
+import { CreateUserDto } from 'src/users/dto/create-user.dto';
+import { UserEntity } from 'src/users/entities/user.entity';
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class AuthService {
@@ -17,36 +19,33 @@ export class AuthService {
   async signIn(email: string, password: string) {
     const user = await this.usersService.findOne({ email });
     if (!user) {
-      throw new HttpException('Invalid credential!', HttpStatus.UNAUTHORIZED);
+      throw new UnauthorizedException('Invalid credentials');
     }
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-      throw new HttpException('Invalid credential!', HttpStatus.UNAUTHORIZED);
+      throw new UnauthorizedException('Invalid credentials');
     }
 
-    const access_token = await this.jwtService.signAsync(
-      JSON.stringify({ ...user }),
-      {
-        secret: jwtConstants.secret,
-      },
-    );
-    return { access_token, user };
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      profile: user.profile,
+    };
+
+    const access_token = await this.jwtService.signAsync(payload);
+    return {
+      access_token,
+      user: new UserEntity(user),
+    };
   }
 
   async register(data: CreateUserDto) {
-    try {
-      const exists = await this.usersService.findOne({ email: data.email });
-      if (exists) {
-        throw new HttpException(
-          'Email already registred!',
-          HttpStatus.UNPROCESSABLE_ENTITY,
-        );
-      }
-      const new_user = await this.usersService.create(data);
-      return new_user;
-    } catch (error) {
-      throw new HttpException(error.message, HttpStatus.UNPROCESSABLE_ENTITY);
+    const exists = await this.usersService.findOne({ email: data.email });
+    if (exists) {
+      throw new ConflictException('Email already registered');
     }
+    const newUser = await this.usersService.create(data);
+    return new UserEntity(newUser);
   }
 }

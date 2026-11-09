@@ -1,96 +1,81 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { User } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+import { PrismaService } from 'src/database/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { PrismaService } from 'src/database/prisma.service';
-
-import * as bcrypt from 'bcrypt';
-import { User } from '@prisma/client';
+import { UserEntity } from './entities/user.entity';
 
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
-  async create(createUserDto: CreateUserDto): Promise<User> {
-    const { email, firstName, password, avatar, courseId, createdAt, profile } =
+
+  async create(createUserDto: CreateUserDto): Promise<UserEntity> {
+    const { email, firstName, lastName, password, avatar, courseId, profile } =
       createUserDto;
     const hash = await bcrypt.hash(password, 10);
     const newUser = await this.prisma.user.create({
       data: {
         email,
         firstName,
+        lastName,
         password: hash,
         avatar,
         courseId,
-        createdAt,
         profile,
       },
     });
 
-    return this.prisma.user.findUnique({
-      where: { id: newUser.id },
-    });
+    return new UserEntity(newUser);
   }
 
-  async findAll(): Promise<User[]> {
-    return this.prisma.user.findMany();
+  async findAll(): Promise<UserEntity[]> {
+    const users = await this.prisma.user.findMany();
+    return users.map((user) => new UserEntity(user));
   }
 
-  async findOne(args: { id?: number; email?: string }): Promise<User> {
-    const query_scope = {
-      id: async (id: number) => {
-        try {
-          return this.prisma.user.findUnique({
-            include: { course: true },
-            where: { id },
-          });
-        } catch (error) {
-          throw new HttpException('User Not Found', HttpStatus.NOT_FOUND);
-        }
-      },
-      email: async (email: string) => {
-        try {
-          return this.prisma.user.findUnique({
-            where: { email },
-          });
-        } catch (error) {
-          throw new HttpException('User Not Found', HttpStatus.NOT_FOUND);
-        }
-      },
-    };
-    const keys = Object.keys(args);
-    for (const key of keys) {
-      if (Object.keys(query_scope).includes(key)) {
-        return query_scope[key](args[key]);
-      }
+  async findOne(args: { id?: number; email?: string }): Promise<User | null> {
+    if (args.id) {
+      return this.prisma.user.findUnique({
+        where: { id: args.id },
+        include: { course: true },
+      });
     }
-    throw new HttpException('Bad Request', HttpStatus.BAD_REQUEST);
-  }
-
-  async verifyPermission(user: User) {
-    try {
-      if (user.profile !== 'ADMIN') {
-        throw new HttpException(
-          `action not allowed for this profile: ${user.profile}`,
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-    } catch (error) {
-      if ((error.status = HttpStatus.UNAUTHORIZED)) {
-        throw new HttpException(error.message, error.status);
-      }
+    if (args.email) {
+      return this.prisma.user.findUnique({
+        where: { email: args.email },
+        include: { course: true },
+      });
     }
+    return null;
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    const { avatar } = updateUserDto;
-    return this.prisma.user.update({
-      where: { id: +id },
-      data: {
-        avatar,
-      },
+  async findOneOrFail(args: {
+    id?: number;
+    email?: string;
+  }): Promise<UserEntity> {
+    const user = await this.findOne(args);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return new UserEntity(user);
+  }
+
+  async update(id: number, updateUserDto: UpdateUserDto): Promise<UserEntity> {
+    await this.findOneOrFail({ id });
+    const data: Record<string, unknown> = { ...updateUserDto };
+    if (updateUserDto.password) {
+      data.password = await bcrypt.hash(updateUserDto.password, 10);
+    }
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data,
     });
+    return new UserEntity(updated);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async remove(id: number): Promise<void> {
+    await this.findOneOrFail({ id });
+    await this.prisma.user.delete({ where: { id } });
   }
 }

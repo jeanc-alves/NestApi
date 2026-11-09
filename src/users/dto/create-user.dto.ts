@@ -1,22 +1,41 @@
 import { Profile } from '@prisma/client';
-import { IsEmail, IsNotEmpty, IsOptional } from 'class-validator';
+import {
+  IsEmail,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 export class CreateUserDto {
-  createdAt?: Date;
-  @IsNotEmpty({ message: 'First name is Required!' })
+  @IsString()
+  @IsNotEmpty({ message: 'First name is required' })
   firstName: string;
 
-  second_name?: string;
-  profile: Profile;
+  @IsString()
+  @IsOptional()
+  lastName?: string;
 
+  @IsEnum(Profile)
+  @IsOptional()
+  profile?: Profile = Profile.ALUNO;
+
+  @IsString()
+  @IsOptional()
   avatar?: string;
-  @IsEmail()
-  @IsNotEmpty({ message: 'Email is Required!' })
+
+  @IsEmail({}, { message: 'Valid email is required' })
+  @IsNotEmpty({ message: 'Email is required' })
   email: string;
 
-  @IsNotEmpty({ message: 'Password is Required!' })
+  @IsString()
+  @MinLength(6, { message: 'Password must have at least 6 characters' })
+  @IsNotEmpty({ message: 'Password is required' })
   password: string;
 
+  @IsInt()
   @IsOptional()
   courseId?: number;
 }
