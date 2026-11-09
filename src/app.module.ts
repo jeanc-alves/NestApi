@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER } from '@nestjs/core';
+import { AppController } from './app.controller';
+import { PrismaService } from './database/prisma.service';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { CoursesModule } from './courses/courses.module';
@@ -25,8 +27,9 @@ import { PrismaClientExceptionFilter } from './filters/prisma-client-exception.f
     FilesModule,
     EmailModule,
   ],
-  controllers: [],
+  controllers: [AppController],
   providers: [
+    PrismaService,
     RabbitMQService,
     {
       provide: APP_FILTER,

@@ -1,22 +1,33 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { PrismaService } from './database/prisma.service';
 
 describe('AppController', () => {
   let appController: AppController;
+  const mockPrisma = {
+    user: {
+      findFirst: jest.fn().mockResolvedValue({ id: 1, email: 'admin@nest.com' }),
+    },
+  };
 
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
       controllers: [AppController],
-      providers: [AppService],
+      providers: [
+        {
+          provide: PrismaService,
+          useValue: mockPrisma,
+        },
+      ],
     }).compile();
 
     appController = app.get<AppController>(AppController);
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', async () => {
-      expect(await appController.getHello()).toBe('Hello World!');
+    it('should return user from prisma findFirst', async () => {
+      const result = await appController.getHello();
+      expect(result).toEqual({ id: 1, email: 'admin@nest.com' });
     });
   });
 });
